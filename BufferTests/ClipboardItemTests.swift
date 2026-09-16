@@ -66,4 +66,31 @@ class ClipboardItemTests: XCTestCase {
         XCTAssertNotEqual(item1, itemWithTags, "Items with different tags should not be equal")
         XCTAssertEqual(item1, item1, "Identical items should be equal")
     }
+
+    func testMinimumTextLengthFilter() {
+        XCTAssertFalse(ClipboardWatcher.shouldCaptureText("", minimumLength: 1))
+        XCTAssertFalse(ClipboardWatcher.shouldCaptureText("ab", minimumLength: 3))
+        XCTAssertTrue(ClipboardWatcher.shouldCaptureText("abc", minimumLength: 3))
+        XCTAssertTrue(ClipboardWatcher.shouldCaptureText("👨‍👩‍👧‍👦", minimumLength: 1))
+    }
+
+    func testDuplicateInlineTextLookup() {
+        let first = ClipboardItem.text("first")
+        let duplicate = ClipboardItem.text("duplicate")
+        let items = [first, duplicate]
+
+        XCTAssertEqual(
+            ClipboardStore.duplicateInlineTextIndex(for: .text("duplicate"), in: items),
+            1
+        )
+        XCTAssertNil(
+            ClipboardStore.duplicateInlineTextIndex(for: .text("new"), in: items)
+        )
+        XCTAssertNil(
+            ClipboardStore.duplicateInlineTextIndex(
+                for: .largeText(preview: "duplicate", filename: "large.txt"),
+                in: items
+            )
+        )
+    }
 }

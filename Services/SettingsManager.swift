@@ -34,6 +34,8 @@ class SettingsManager: ObservableObject {
     // Keys
     private let hotkeyModifiersKey = "hotkeyModifiers"
     private let hotkeyKeyCodeKey = "hotkeyKeyCode"
+    private let minTextLengthKey = "minTextLength"
+    private let deduplicateHistoryKey = "deduplicateHistory"
     
     @Published var hotkeyModifiers: HotkeyModifiers
     @Published var hotkeyKeyCode: UInt16
@@ -41,6 +43,8 @@ class SettingsManager: ObservableObject {
     @Published var historyLimit: HistoryLimit = .essential
     @Published var includePrereleases: Bool = false
     @Published var hideStatusBar: Bool = false
+    @Published var minTextLength: Int = 1
+    @Published var deduplicateHistory: Bool = false
     
     private init() {
         // Initialize with defaults first, then load saved values
@@ -72,6 +76,10 @@ class SettingsManager: ObservableObject {
 
         // Load hide status bar
         self.hideStatusBar = defaults.bool(forKey: "hideStatusBar")
+
+        // Load clipboard history filtering settings
+        self.minTextLength = defaults.object(forKey: minTextLengthKey) as? Int ?? 1
+        self.deduplicateHistory = defaults.bool(forKey: deduplicateHistoryKey)
     }
     
     func save() {
@@ -80,6 +88,8 @@ class SettingsManager: ObservableObject {
         defaults.set(historyLimit.rawValue, forKey: "historyLimit")
         defaults.set(includePrereleases, forKey: "includePrereleases")
         defaults.set(hideStatusBar, forKey: "hideStatusBar")
+        defaults.set(minTextLength, forKey: minTextLengthKey)
+        defaults.set(deduplicateHistory, forKey: deduplicateHistoryKey)
     }
     
     func toggleLaunchAtLogin(_ enabled: Bool) {

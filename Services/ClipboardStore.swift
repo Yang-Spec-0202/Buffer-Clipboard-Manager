@@ -75,8 +75,25 @@ class ClipboardStore: ObservableObject {
         }
     }
     
+    static func duplicateInlineTextIndex(for item: ClipboardItem, in items: [ClipboardItem]) -> Int? {
+        guard item.type == .text,
+              !item.isFileBacked,
+              let text = item.textContent else { return nil }
+
+        return items.firstIndex {
+            $0.type == .text && !$0.isFileBacked && $0.textContent == text
+        }
+    }
+
     private func performAdd(_ item: ClipboardItem) {
         print("[Buffer] Store: Adding item, current count: \(items.count)")
+
+        // Promote an existing identical inline text item instead of storing a duplicate.
+        if SettingsManager.shared.deduplicateHistory,
+           let duplicateIndex = Self.duplicateInlineTextIndex(for: item, in: items) {
+            moveToTop(items[duplicateIndex])
+            return
+        }
         
         // Insert at beginning (newest first)
         items.insert(item, at: 0)

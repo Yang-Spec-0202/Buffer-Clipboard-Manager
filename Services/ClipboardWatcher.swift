@@ -18,6 +18,10 @@ class ClipboardWatcher: ObservableObject {
     // Size thresholds for text handling
     private let inlineTextLimit = 50_000       // 50 KB — store inline
     private let previewLength = 500            // Characters kept as inline preview
+
+    static func shouldCaptureText(_ text: String, minimumLength: Int) -> Bool {
+        !text.isEmpty && text.count >= minimumLength
+    }
     
     init(store: ClipboardStore) {
         self.store = store
@@ -98,7 +102,8 @@ class ClipboardWatcher: ObservableObject {
         }
         
         // Try to capture text first
-        if let text = pasteboard.string(forType: .string), !text.isEmpty {
+        if let text = pasteboard.string(forType: .string),
+           Self.shouldCaptureText(text, minimumLength: SettingsManager.shared.minTextLength) {
             let textSize = text.utf8.count
             
             // Use prefix hash for large text to avoid expensive full-string hashing
