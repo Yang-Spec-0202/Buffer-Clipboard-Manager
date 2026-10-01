@@ -26,6 +26,10 @@ private struct ChunkedTextState {
 
 /// Manages the floating history window
 class HistoryWindowController: NSWindowController {
+    static let windowAutosaveName = NSWindow.FrameAutosaveName("BufferHistoryWindow")
+    static let defaultWindowSize = NSSize(width: 700, height: 480)
+    static let minWindowSize = NSSize(width: 600, height: 400)
+
     private let store: ClipboardStore
     private var previousApp: NSRunningApplication?
 
@@ -47,7 +51,7 @@ class HistoryWindowController: NSWindowController {
         
         // Wider window for split pane
         let panel = HistoryPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 700, height: 480),
+            contentRect: NSRect(origin: .zero, size: Self.defaultWindowSize),
             styleMask: [.titled, .closable, .resizable, .nonactivatingPanel, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -65,6 +69,7 @@ class HistoryWindowController: NSWindowController {
 
     override func close() {
         lastClosedAt = Date()
+        window?.saveFrame(usingName: Self.windowAutosaveName)
         super.close()
     }
     
@@ -73,6 +78,7 @@ class HistoryWindowController: NSWindowController {
     }
     
     private func setupPanel(_ panel: NSPanel) {
+        panel.title = "Buffer"
         panel.level = .floating
         panel.isFloatingPanel = true
         panel.becomesKeyOnlyIfNeeded = false
@@ -87,8 +93,13 @@ class HistoryWindowController: NSWindowController {
         panel.contentView?.wantsLayer = true
         panel.contentView?.layer?.cornerRadius = 10
         panel.contentView?.layer?.masksToBounds = true
+        panel.minSize = Self.minWindowSize
         
-        panel.center()
+        let didRestore = panel.setFrameUsingName(Self.windowAutosaveName)
+        if !didRestore {
+            panel.center()
+        }
+        panel.setFrameAutosaveName(Self.windowAutosaveName)
         
         panel.standardWindowButton(.closeButton)?.isHidden = true
         panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
@@ -129,10 +140,18 @@ class HistoryWindowController: NSWindowController {
             },
             onDismiss: { [weak self] in
                 self?.close()
+            },
+            onOpenSettings: { [weak self] in
+                self?.openSettings()
             }
         )
         
         window?.contentView = NSHostingView(rootView: contentView)
+    }
+
+    private func openSettings() {
+        close()
+        NotificationCenter.default.post(name: .bufferOpenSettingsWindow, object: nil)
     }
     
     private func copyToClipboard(_ item: ClipboardItem) {
@@ -164,11 +183,23 @@ class HistoryWindowController: NSWindowController {
         // Compute reset decision *before* super.showWindow fires didBecomeKeyNotification
         // → bufferWindowDidOpen, so the content view onReceive handler sees the right value.
         shouldResetOnOpen = shouldResetSearch
-        window?.center()
+        ensureWindowIsVisibleOnScreen()
         super.showWindow(sender)
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
         window?.makeFirstResponder(window?.contentView)
+        UpdateService.shared.checkOnWindowOpenIfNeeded()
+    }
+
+    private func ensureWindowIsVisibleOnScreen() {
+        guard let window = window else { return }
+        let currentFrame = window.frame
+        let isVisible = NSScreen.screens.contains { screen in
+            screen.visibleFrame.intersects(currentFrame)
+        }
+        if !isVisible {
+            window.center()
+        }
     }
 }
 
@@ -180,12 +211,14 @@ extension Notification.Name {
     static let bufferStatusBarVisibilityChanged = Notification.Name("bufferStatusBarVisibilityChanged")
     static let bufferUpdateAvailable = Notification.Name("bufferUpdateAvailable")
     static let bufferOpenHistoryWindow = Notification.Name("bufferOpenHistoryWindow")
+    static let bufferOpenSettingsWindow = Notification.Name("bufferOpenSettingsWindow")
 }
 
 /// Main content view - Split pane with list and detail
 struct HistoryContentView: View {
     @ObservedObject var store: ClipboardStore
     @ObservedObject private var updateService = UpdateService.shared
+    @ObservedObject private var settings = SettingsManager.shared
     /// Set to true by HistoryWindowController when the window has been closed for more than
     /// 1.5 minutes (or on the very first open). The view resets search/tag state only when this
     /// is true, then writes false back so a second notification in the same session is a no-op.
@@ -198,10 +231,16 @@ struct HistoryContentView: View {
     let onPaste: (ClipboardItem) -> Void
     let onPasteMultiple: ([ClipboardItem]) -> Void
     let onDismiss: () -> Void
+    let onOpenSettings: () -> Void
     
     @FocusState private var isSearchFocused: Bool
     @State private var showUpdatePopover = false
     @State private var isUpdateChipHovered = false
+    @State private var isSettingsHovered = false
+    @State private var showZoomBadge = false
+    @State private var zoomBadgeTimer: Task<Void, Never>? = nil
+    @State private var showShortcutsPopover = false
+    @State private var isShortcutsHovered = false
     @State private var searchText = ""
     @State private var debouncedSearchText = ""
     @State private var searchDebounceTask: Task<Void, Never>? = nil
@@ -238,6 +277,8 @@ struct HistoryContentView: View {
     
     @State private var filteredItems: [ClipboardItem] = []
     
+    private var previewFontSize: CGFloat { CGFloat(13 * settings.contentZoomScale) }
+
     private func computeFilteredItems() -> [ClipboardItem] {
         var base = store.items
         if let tag = activeTagFilter {
@@ -460,6 +501,22 @@ struct HistoryContentView: View {
         }
         .frame(minWidth: 600, minHeight: 400)
         .background(Color(NSColor.windowBackgroundColor))
+        .ignoresSafeArea()
+        .onChange(of: settings.contentZoomScale) { _ in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                showZoomBadge = true
+            }
+            zoomBadgeTimer?.cancel()
+            zoomBadgeTimer = Task {
+                try? await Task.sleep(nanoseconds: 1_200_000_000)
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        showZoomBadge = false
+                    }
+                }
+            }
+        }
         .onChange(of: searchText) { newValue in
             showTagAutocomplete = newValue.hasPrefix("#")
             
@@ -813,7 +870,12 @@ struct HistoryContentView: View {
                 guard isSearchFocused, searchText.isEmpty, activeTagFilter != nil else { return false }
                 activeTagFilter = nil
                 return true
-            }
+            },
+            onOpenSettings: onOpenSettings,
+            onZoomIn: { settings.zoomIn() },
+            onZoomOut: { settings.zoomOut() },
+            onZoomReset: { settings.zoomReset() },
+            onToggleShortcuts: { showShortcutsPopover.toggle() }
         ))
     }
     
@@ -873,7 +935,22 @@ struct HistoryContentView: View {
     }
     
     private var searchBar: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
+            // App branding
+            HStack(spacing: 5) {
+                Image(systemName: "doc.on.clipboard")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.accentColor)
+                Text("Buffer")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.primary)
+            }
+            .padding(.trailing, 2)
+
+            Color.primary.opacity(0.12)
+                .frame(width: 1, height: 14)
+                .padding(.trailing, 2)
+
             // Search icon
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.secondary.opacity(0.7))
@@ -923,6 +1000,21 @@ struct HistoryContentView: View {
             Text("\(filteredItems.count) items")
                 .font(.system(size: 11, weight: .regular))
                 .foregroundColor(.secondary.opacity(0.6))
+
+            // Settings button
+            Button(action: onOpenSettings) {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(isSettingsHovered ? .primary : .secondary.opacity(0.7))
+                    .frame(width: 22, height: 22)
+                    .background(
+                        RoundedRectangle(cornerRadius: 5)
+                            .fill(Color.primary.opacity(isSettingsHovered ? 0.08 : 0))
+                    )
+            }
+            .buttonStyle(.plain)
+            .help("Settings (⌘,)")
+            .onHover { isSettingsHovered = $0 }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
@@ -1027,7 +1119,22 @@ struct HistoryContentView: View {
                 
                 Spacer()
                 
-                // Action buttons - only show for single selection or hide for multi
+                if showZoomBadge {
+                    HStack(spacing: 4) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 9, weight: .bold))
+                        Text("\(Int(round(settings.contentZoomScale * 100)))%")
+                            .font(.system(size: 10, weight: .bold))
+                    }
+                    .foregroundColor(.accentColor)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(Color.accentColor.opacity(0.15))
+                    .cornerRadius(4)
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                }
+
+                Spacer()
                 if selectionCount <= 1 {
                     HStack(spacing: 12) {
                         if isEditing {
@@ -1335,7 +1442,7 @@ struct HistoryContentView: View {
             if item.isTruncated {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(item.textContent ?? "")
-                        .font(.system(size: 13, design: .monospaced))
+                        .font(.system(size: previewFontSize, design: .monospaced))
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .topLeading)
                     
@@ -1348,12 +1455,12 @@ struct HistoryContentView: View {
                 textContent(item)
             } else if isEditing {
                 TextEditor(text: $editText)
-                    .font(.system(size: 13, design: .monospaced))
+                    .font(.system(size: previewFontSize, design: .monospaced))
                     .frame(minHeight: 200, maxHeight: .infinity)
                     .focused($isTextEditorFocused)
             } else {
                 Text(item.textContent ?? "")
-                    .font(.system(size: 13, design: .monospaced))
+                    .font(.system(size: previewFontSize, design: .monospaced))
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .topLeading)
             }
@@ -1383,7 +1490,7 @@ struct HistoryContentView: View {
                         
                         HStack(alignment: .top) {
                             Text(ocrText)
-                                .font(.system(size: 13))
+                                .font(.system(size: previewFontSize))
                                 .textSelection(.enabled)
                                 .lineSpacing(4)
                                 .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -1411,7 +1518,7 @@ struct HistoryContentView: View {
     private func textContent(_ item: ClipboardItem) -> some View {
         LazyVStack(spacing: 8, pinnedViews: []) {
             Text(chunkedText.visibleText)
-                .font(.system(size: 13, design: .monospaced))
+                .font(.system(size: previewFontSize, design: .monospaced))
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
             
@@ -1491,132 +1598,12 @@ struct HistoryContentView: View {
     }
     
     private var actionBar: some View {
-        HStack(spacing: 16) {
-            // Navigate buttons - minimal, elegant
-            HStack(spacing: 6) {
-                Button(action: navigateDown) {
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.secondary)
-                        .frame(width: 28, height: 28)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(Color(NSColor.controlBackgroundColor))
-                                .shadow(color: Color.black.opacity(0.06), radius: 1, x: 0, y: 1)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
-                        )
-                }
-                .buttonStyle(.plain)
-                
-                Button(action: navigateUp) {
-                    Image(systemName: "chevron.up")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.secondary)
-                        .frame(width: 28, height: 28)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(Color(NSColor.controlBackgroundColor))
-                                .shadow(color: Color.black.opacity(0.06), radius: 1, x: 0, y: 1)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
-                        )
-                }
-                .buttonStyle(.plain)
-            }
+        HStack(spacing: 12) {
+            navigationControls
             
-            if isEditing {
-                Text("Editing")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.accentColor)
-                
-                Color.primary.opacity(0.1)
-                    .frame(width: 2, height: 14)
-                
-                HStack(spacing: 4) {
-                    Text("Esc")
-                        .font(.system(size: 10))
-                    Text("cancel")
-                        .font(.system(size: 11))
-                }
-                .foregroundColor(.secondary.opacity(0.6))
-                
-                HStack(spacing: 4) {
-                    Text("⌘↵ / ⌘E")
-                        .font(.system(size: 10))
-                    Text("save")
-                        .font(.system(size: 11))
-                }
-                .foregroundColor(.secondary.opacity(0.6))
-                .padding(.leading, 4)
-            } else {
-                Text("Navigate")
-                    .font(.system(size: 11, weight: .regular))
-                    .foregroundColor(.secondary.opacity(0.8))
-
-                Color.primary.opacity(0.1)
-                    .frame(width: 2, height: 14)
-
-                HStack(spacing: 4) {
-                    Text("Shift+↑↓")
-                        .font(.system(size: 10))
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 1)
-                        .background(Color(NSColor.controlBackgroundColor))
-                        .cornerRadius(3)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 3)
-                                .stroke(Color.primary.opacity(0.12), lineWidth: 0.5)
-                        )
-                    Text("multi-select")
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary.opacity(0.6))
-                }
-
-                HStack(spacing: 4) {
-                    Text("⌘P")
-                        .font(.system(size: 10))
-                    Text("pin")
-                        .font(.system(size: 11))
-                }
-                .foregroundColor(.secondary.opacity(0.6))
-                .padding(.leading, 8)
-
-                HStack(spacing: 4) {
-                    Text("⌘B")
-                        .font(.system(size: 10))
-                    Text("save")
-                        .font(.system(size: 11))
-                }
-                .foregroundColor(.secondary.opacity(0.6))
-                .padding(.leading, 4)
-                
-                if let item = selectedItem, item.isEditable {
-                    HStack(spacing: 4) {
-                        Text("⌘E")
-                            .font(.system(size: 10))
-                        Text("edit")
-                            .font(.system(size: 11))
-                    }
-                    .foregroundColor(.secondary.opacity(0.6))
-                    .padding(.leading, 4)
-                }
-                
-                if selectedItem?.type == .image {
-                    HStack(spacing: 4) {
-                        Text("⌘S")
-                            .font(.system(size: 10))
-                        Text("save")
-                            .font(.system(size: 11))
-                    }
-                    .foregroundColor(.secondary.opacity(0.6))
-                    .padding(.leading, 4)
-                }
-            }
+            shortcutsButton
+            
+            contextIndicator
             
             Spacer()
             
@@ -1633,6 +1620,118 @@ struct HistoryContentView: View {
                     alignment: .top
                 )
         )
+    }
+
+    private var navigationControls: some View {
+        HStack(spacing: 4) {
+            Button(action: navigateDown) {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .frame(width: 26, height: 26)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color(NSColor.controlBackgroundColor))
+                            .shadow(color: Color.black.opacity(0.04), radius: 1, x: 0, y: 1)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
+                    )
+            }
+            .buttonStyle(.plain)
+            .help("Next item (↓)")
+            
+            Button(action: navigateUp) {
+                Image(systemName: "chevron.up")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .frame(width: 26, height: 26)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color(NSColor.controlBackgroundColor))
+                            .shadow(color: Color.black.opacity(0.04), radius: 1, x: 0, y: 1)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
+                    )
+            }
+            .buttonStyle(.plain)
+            .help("Previous item (↑)")
+        }
+    }
+
+    private var shortcutsButton: some View {
+        Button(action: { showShortcutsPopover.toggle() }) {
+            HStack(spacing: 5) {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 11, weight: .medium))
+                Text("Shortcuts")
+                    .font(.system(size: 11, weight: .medium))
+            }
+            .foregroundColor(isShortcutsHovered ? .primary : .secondary.opacity(0.75))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(NSColor.controlBackgroundColor))
+                    .shadow(color: Color.black.opacity(0.04), radius: 1, x: 0, y: 1)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(Color.primary.opacity(isShortcutsHovered ? 0.15 : 0.08), lineWidth: 0.5)
+            )
+        }
+        .buttonStyle(.plain)
+        .help("Keyboard Shortcuts (⌘/)")
+        .onHover { isShortcutsHovered = $0 }
+        .popover(isPresented: $showShortcutsPopover, arrowEdge: .bottom) {
+            ShortcutsCheatSheetView(onOpenSettings: {
+                showShortcutsPopover = false
+                settings.selectedSettingsTab = 1
+                onOpenSettings()
+            })
+        }
+    }
+
+    @ViewBuilder
+    private var contextIndicator: some View {
+        if isEditing {
+            HStack(spacing: 6) {
+                Color.primary.opacity(0.1)
+                    .frame(width: 1, height: 14)
+                
+                Text("Editing")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.accentColor)
+                
+                HStack(spacing: 3) {
+                    Text("Esc")
+                        .font(.system(size: 10, design: .monospaced))
+                    Text("cancel")
+                        .font(.system(size: 10))
+                }
+                .foregroundColor(.secondary.opacity(0.6))
+                
+                HStack(spacing: 3) {
+                    Text("⌘↵")
+                        .font(.system(size: 10, design: .monospaced))
+                    Text("save")
+                        .font(.system(size: 10))
+                }
+                .foregroundColor(.secondary.opacity(0.6))
+            }
+        } else if selectionCount > 1 {
+            HStack(spacing: 6) {
+                Color.primary.opacity(0.1)
+                    .frame(width: 1, height: 14)
+                
+                Text("\(selectionCount) items selected")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.secondary.opacity(0.8))
+            }
+        }
     }
 
     // MARK: - Tag views
@@ -2035,117 +2134,15 @@ struct GlobalKeyMonitor: NSViewRepresentable {
     let onEdit: () -> Void
     let onTabComplete: () -> Void
     let onBackspace: () -> Bool
+    let onOpenSettings: () -> Void
+    let onZoomIn: () -> Void
+    let onZoomOut: () -> Void
+    let onZoomReset: () -> Void
+    let onToggleShortcuts: () -> Void
 
     func makeNSView(context: Context) -> NSView {
         let view = NSView()
-        DispatchQueue.main.async {
-            // Add local monitor to window
-            guard let window = view.window else { return }
-            
-            let monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-                let isEditing = context.coordinator.isEditing
-                switch event.keyCode {
-                case 126: // Up
-                    if isEditing { return event }
-                    if event.modifierFlags.contains(.shift) {
-                        context.coordinator.onExtendUp?()
-                    } else {
-                        context.coordinator.onUp?()
-                    }
-                    return nil // Consume event
-                case 125: // Down
-                    if isEditing { return event }
-                    if event.modifierFlags.contains(.shift) {
-                        context.coordinator.onExtendDown?()
-                    } else {
-                        context.coordinator.onDown?()
-                    }
-                    return nil // Consume event
-                case 36: // Enter
-                    if isEditing {
-                        if event.modifierFlags.contains(.command) {
-                            context.coordinator.onSaveEdit?()
-                            return nil
-                        }
-                        return event
-                    }
-                    context.coordinator.onEnter?()
-                    return nil
-                case 53: // Escape
-                    context.coordinator.onEscape?()
-                    return nil
-                case 51: // Delete/Backspace
-                    if isEditing {
-                        if event.modifierFlags.contains(.command) {
-                            return nil // ⌘Delete is no-op
-                        }
-                        return event
-                    }
-                    if event.modifierFlags.contains(.command) {
-                        context.coordinator.onDelete?()
-                        return nil
-                    }
-                    if context.coordinator.onBackspace?() == true { return nil }
-                    return event
-                case 8: // C (for Copy)
-                    if event.modifierFlags.contains(.command) {
-                        if isEditing { return event }
-                        // If text is selected in a text view, let the system handle native copy
-                        if let textView = view.window?.firstResponder as? NSTextView, textView.selectedRange.length > 0 {
-                            return event
-                        }
-                        context.coordinator.onCopy?()
-                        return nil
-                    }
-                    return event
-                case 35: // Cmd+P (P is 35)
-                    if event.modifierFlags.contains(.command) {
-                        if isEditing { return nil }
-                        context.coordinator.onPin?()
-                        return nil
-                    }
-                    return event
-                case 11: // Cmd+B (B is 11)
-                    if event.modifierFlags.contains(.command) {
-                        if isEditing { return nil }
-                        context.coordinator.onBookmark?()
-                        return nil
-                    }
-                    return event
-                case 1: // Cmd+S (S is 1)
-                    if event.modifierFlags.contains(.command) {
-                        if isEditing {
-                            context.coordinator.onSaveEdit?()
-                            return nil
-                        }
-                        context.coordinator.onSaveImage?()
-                        return nil
-                    }
-                    return event
-                case 17: // Cmd+T (T is 17)
-                    if event.modifierFlags.contains(.command) {
-                        if isEditing { return nil }
-                        context.coordinator.onAddTag?()
-                        return nil
-                    }
-                    return event
-                case 14: // Cmd+E (E is 14)
-                    if event.modifierFlags.contains(.command) {
-                        context.coordinator.onEdit?()
-                        return nil
-                    }
-                    return event
-                case 48: // Tab
-                    if isEditing { return event }
-                    context.coordinator.onTabComplete?()
-                    return nil
-                default:
-                    return event
-                }
-            }
-            
-            context.coordinator.monitor = monitor
-        }
+        context.coordinator.setupMonitor(for: view)
         return view
     }
     
@@ -2167,6 +2164,12 @@ struct GlobalKeyMonitor: NSViewRepresentable {
         context.coordinator.onEdit = onEdit
         context.coordinator.onTabComplete = onTabComplete
         context.coordinator.onBackspace = onBackspace
+        context.coordinator.onOpenSettings = onOpenSettings
+        context.coordinator.onZoomIn = onZoomIn
+        context.coordinator.onZoomOut = onZoomOut
+        context.coordinator.onZoomReset = onZoomReset
+        context.coordinator.onToggleShortcuts = onToggleShortcuts
+        context.coordinator.setupMonitor(for: nsView)
     }
     
     func makeCoordinator() -> Coordinator {
@@ -2175,6 +2178,7 @@ struct GlobalKeyMonitor: NSViewRepresentable {
     
     class Coordinator {
         var monitor: Any?
+        weak var view: NSView?
         var isEditing: Bool = false
         var onUp: (() -> Void)?
         var onDown: (() -> Void)?
@@ -2192,6 +2196,171 @@ struct GlobalKeyMonitor: NSViewRepresentable {
         var onEdit: (() -> Void)?
         var onTabComplete: (() -> Void)?
         var onBackspace: (() -> Bool)?
+        var onOpenSettings: (() -> Void)?
+        var onZoomIn: (() -> Void)?
+        var onZoomOut: (() -> Void)?
+        var onZoomReset: (() -> Void)?
+        var onToggleShortcuts: (() -> Void)?
+        
+        func setupMonitor(for view: NSView) {
+            self.view = view
+            guard monitor == nil else { return }
+            
+            monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                guard let self = self else { return event }
+                // Only intercept events when our window is the key window
+                if let win = self.view?.window, !win.isKeyWindow {
+                    return event
+                }
+                
+                let isEditing = self.isEditing
+                let flags = event.modifierFlags
+                let isCmd = flags.contains(.command)
+                let hasCtrlOrOpt = flags.contains(.control) || flags.contains(.option)
+                
+                // Command shortcuts (with or without Shift)
+                if isCmd && !hasCtrlOrOpt {
+                    let charsIgnoring = event.charactersIgnoringModifiers ?? ""
+                    let rawChars = event.characters ?? ""
+                    
+                    // Zoom In: ⌘+ or ⌘=
+                    // KeyCodes: 24 (Equal/Plus), 69 (Keypad +), 81 (Keypad =)
+                    if event.keyCode == 24 || event.keyCode == 69 || event.keyCode == 81 ||
+                       charsIgnoring == "+" || charsIgnoring == "=" || rawChars == "+" || rawChars == "=" {
+                        self.onZoomIn?()
+                        return nil
+                    }
+                    
+                    // Zoom Out: ⌘- or ⌘_
+                    // KeyCodes: 27 (Minus), 78 (Keypad -)
+                    if event.keyCode == 27 || event.keyCode == 78 ||
+                       charsIgnoring == "-" || charsIgnoring == "_" || rawChars == "-" || rawChars == "_" {
+                        self.onZoomOut?()
+                        return nil
+                    }
+                    
+                    // Zoom Reset: ⌘0
+                    // KeyCode: 29 (0)
+                    if event.keyCode == 29 || charsIgnoring == "0" || rawChars == "0" {
+                        self.onZoomReset?()
+                        return nil
+                    }
+                    
+                    // Settings: ⌘,
+                    // KeyCode: 43 (Comma)
+                    if event.keyCode == 43 || charsIgnoring == "," || rawChars == "," {
+                        self.onOpenSettings?()
+                        return nil
+                    }
+                    
+                    // Shortcuts Cheat Sheet: ⌘/ or ⌘?
+                    // KeyCode: 44 (Slash)
+                    if event.keyCode == 44 || charsIgnoring == "/" || charsIgnoring == "?" || rawChars == "/" || rawChars == "?" {
+                        self.onToggleShortcuts?()
+                        return nil
+                    }
+                }
+                
+                switch event.keyCode {
+                case 126: // Up
+                    if isEditing { return event }
+                    if event.modifierFlags.contains(.shift) {
+                        self.onExtendUp?()
+                    } else {
+                        self.onUp?()
+                    }
+                    return nil // Consume event
+                case 125: // Down
+                    if isEditing { return event }
+                    if event.modifierFlags.contains(.shift) {
+                        self.onExtendDown?()
+                    } else {
+                        self.onDown?()
+                    }
+                    return nil // Consume event
+                case 36: // Enter
+                    if isEditing {
+                        if event.modifierFlags.contains(.command) {
+                            self.onSaveEdit?()
+                            return nil
+                        }
+                        return event
+                    }
+                    self.onEnter?()
+                    return nil
+                case 53: // Escape
+                    self.onEscape?()
+                    return nil
+                case 51: // Delete/Backspace
+                    if isEditing {
+                        if event.modifierFlags.contains(.command) {
+                            return nil // ⌘Delete is no-op
+                        }
+                        return event
+                    }
+                    if event.modifierFlags.contains(.command) {
+                        self.onDelete?()
+                        return nil
+                    }
+                    if self.onBackspace?() == true { return nil }
+                    return event
+                case 8: // C (for Copy)
+                    if event.modifierFlags.contains(.command) {
+                        if isEditing { return event }
+                        // If text is selected in a text view, let the system handle native copy
+                        if let textView = self.view?.window?.firstResponder as? NSTextView, textView.selectedRange.length > 0 {
+                            return event
+                        }
+                        self.onCopy?()
+                        return nil
+                    }
+                    return event
+                case 35: // Cmd+P (P is 35)
+                    if event.modifierFlags.contains(.command) {
+                        if isEditing { return nil }
+                        self.onPin?()
+                        return nil
+                    }
+                    return event
+                case 11: // Cmd+B (B is 11)
+                    if event.modifierFlags.contains(.command) {
+                        if isEditing { return nil }
+                        self.onBookmark?()
+                        return nil
+                    }
+                    return event
+                case 1: // Cmd+S (S is 1)
+                    if event.modifierFlags.contains(.command) {
+                        if isEditing {
+                            self.onSaveEdit?()
+                            return nil
+                        }
+                        self.onSaveImage?()
+                        return nil
+                    }
+                    return event
+                case 17: // Cmd+T (T is 17)
+                    if event.modifierFlags.contains(.command) {
+                        if isEditing { return nil }
+                        self.onAddTag?()
+                        return nil
+                    }
+                    return event
+                case 14: // Cmd+E (E is 14)
+                    if event.modifierFlags.contains(.command) {
+                        self.onEdit?()
+                        return nil
+                    }
+                    return event
+                case 48: // Tab
+                    if isEditing { return event }
+                    self.onTabComplete?()
+                    return nil
+                default:
+                    return event
+                }
+            }
+        }
         
         deinit {
             if let monitor = monitor {

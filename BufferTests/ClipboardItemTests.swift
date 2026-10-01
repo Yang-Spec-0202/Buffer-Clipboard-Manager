@@ -151,4 +151,93 @@ class ClipboardItemTests: XCTestCase {
         service.stopPeriodicChecking()
         service.updateCheckInterval = 3600
     }
+
+    func testShouldCheckForUpdatesThrottling() {
+        let now = Date()
+        let interval: TimeInterval = 3600 // 1 hour
+
+        // 1. Never checked before
+        XCTAssertTrue(UpdateService.shouldCheckForUpdates(lastCheckDate: nil, interval: interval, currentDate: now))
+
+        // 2. Checked 30 minutes ago (< 1 hour)
+        let thirtyMinutesAgo = now.addingTimeInterval(-1800)
+        XCTAssertFalse(UpdateService.shouldCheckForUpdates(lastCheckDate: thirtyMinutesAgo, interval: interval, currentDate: now))
+
+        // 3. Checked 59 minutes ago (< 1 hour)
+        let fiftyNineMinutesAgo = now.addingTimeInterval(-3540)
+        XCTAssertFalse(UpdateService.shouldCheckForUpdates(lastCheckDate: fiftyNineMinutesAgo, interval: interval, currentDate: now))
+
+        // 4. Checked exactly 60 minutes ago (>= 1 hour)
+        let sixtyMinutesAgo = now.addingTimeInterval(-3600)
+        XCTAssertTrue(UpdateService.shouldCheckForUpdates(lastCheckDate: sixtyMinutesAgo, interval: interval, currentDate: now))
+
+        // 5. Checked 2 hours ago (>= 1 hour)
+        let twoHoursAgo = now.addingTimeInterval(-7200)
+        XCTAssertTrue(UpdateService.shouldCheckForUpdates(lastCheckDate: twoHoursAgo, interval: interval, currentDate: now))
+    }
+
+    func testHistoryWindowAutosaveAndSizeConstants() {
+        XCTAssertEqual(HistoryWindowController.windowAutosaveName, "BufferHistoryWindow")
+        XCTAssertEqual(HistoryWindowController.defaultWindowSize.width, 700)
+        XCTAssertEqual(HistoryWindowController.defaultWindowSize.height, 480)
+        XCTAssertEqual(HistoryWindowController.minWindowSize.width, 600)
+        XCTAssertEqual(HistoryWindowController.minWindowSize.height, 400)
+    }
+
+    func testBufferOpenSettingsWindowNotification() {
+        let exp = expectation(description: "bufferOpenSettingsWindow received")
+        let observer = NotificationCenter.default.addObserver(
+            forName: .bufferOpenSettingsWindow,
+            object: nil,
+            queue: .main
+        ) { _ in
+            exp.fulfill()
+        }
+        
+        NotificationCenter.default.post(name: .bufferOpenSettingsWindow, object: nil)
+        wait(for: [exp], timeout: 1.0)
+        NotificationCenter.default.removeObserver(observer)
+    }
+
+    func testContentZoomScaleInSettingsManager() {
+        let settings = SettingsManager.shared
+        let original = settings.contentZoomScale
+        defer {
+            settings.contentZoomScale = original
+            settings.save()
+        }
+
+        settings.zoomReset()
+        XCTAssertEqual(settings.contentZoomScale, 1.0)
+
+        // Step up
+        settings.zoomIn()
+        XCTAssertEqual(settings.contentZoomScale, 1.15)
+        settings.zoomIn()
+        XCTAssertEqual(settings.contentZoomScale, 1.3)
+        settings.zoomIn()
+        XCTAssertEqual(settings.contentZoomScale, 1.5)
+        // Clamp max
+        settings.zoomIn()
+        XCTAssertEqual(settings.contentZoomScale, 1.5)
+
+        // Step down
+        settings.zoomOut()
+        XCTAssertEqual(settings.contentZoomScale, 1.3)
+        settings.zoomOut()
+        XCTAssertEqual(settings.contentZoomScale, 1.15)
+        settings.zoomOut()
+        XCTAssertEqual(settings.contentZoomScale, 1.0)
+        settings.zoomOut()
+        XCTAssertEqual(settings.contentZoomScale, 0.9)
+        settings.zoomOut()
+        XCTAssertEqual(settings.contentZoomScale, 0.8)
+        // Clamp min
+        settings.zoomOut()
+        XCTAssertEqual(settings.contentZoomScale, 0.8)
+
+        // Reset
+        settings.zoomReset()
+        XCTAssertEqual(settings.contentZoomScale, 1.0)
+    }
 }
