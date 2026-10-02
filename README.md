@@ -36,8 +36,11 @@
 - **Tags & Filtering** — Categorize history items with custom, color-coded tags. Quick tag items with `Cmd+T` and filter using `#` autocomplete in the search bar  
 - **Configurable hotkeys** — Change the global shortcut in Settings with dynamic re-registration  
 - **Native macOS Feel** — Clean SwiftUI + AppKit menu-bar app  
-- **Seamless Updates** — Built-in secure auto-updater with code signature verification and a native post-update HUD with a "What's New" link  
-- **Inline Text Editing** — Edit any text or code snippet directly within the clipboard history window with auto-save and macOS pasteboard sync
+- **Interactive Image Inspection Canvas** — Pinch-to-zoom, pan, double-click fit/reset, and `⌘+`/`⌘-` zoom controls for inspecting screenshots and image clips  
+- **Shortcuts Cheat Sheet & Content Zoom** — On-screen interactive shortcuts popup (`⌘/`), footer shortcuts bar, and content text zoom (`⌘+`/`⌘-`/`⌘0`)  
+- **Noise Controls & History Tiers** — Configurable history capacity tiers and automatic noise filtering to suppress rapid duplicate clips and short fragments  
+- **Seamless Updates** — Built-in secure auto-updater with in-app notification chip, release highlights popover, and post-update HUD  
+- **Inline Text Editing** — Edit any text or code snippet directly within the clipboard history window with safe cancel (`Esc`) and macOS pasteboard sync  
 - **Open Source** — MIT license, actively maintained  
 
 ---
@@ -98,34 +101,62 @@
 <img width="709" height="486" alt="image" src="https://github.com/user-attachments/assets/6b1ac775-b75f-43db-8438-4170336c25cc" />
 
 
+#### Keyboard Shortcuts Cheat Sheet & Image Canvas
+
+<p align="center">
+  <img width="800" alt="Keyboard Shortcuts Cheat Sheet & Image Canvas" src="https://github.com/user-attachments/assets/44944452-b449-42ef-b8a9-439ad72cd6f7" />
+</p>
+
+<p align="center">
+  <em>Interactive shortcuts cheat sheet popover (⌘/) and interactive image inspection canvas</em>
+</p>
+
+
 #### Inline Text Editing
 
-Click the **Pencil icon** in the preview/detail pane to open an inline text editor and modify any text item directly. While editing, global keyboard shortcuts are **temporarily bypassed** so you can type normally. Press **Escape**, click the pencil icon again, or select a different item to **auto-save** your changes and sync them to the system pasteboard.
+Click the **Pencil icon** in the preview/detail pane to open an inline text editor and modify any text item directly. While editing, global keyboard shortcuts are **temporarily bypassed** so you can type normally. Click **Save** to persist changes and sync them to the macOS pasteboard, or press **Escape** to cancel and cleanly discard unsaved changes.
 
 ---
 
 ## ⌨️ Keyboard Shortcuts
 
+Press `⌘/` anytime or click the **Shortcuts** button in the footer bar to open the interactive on-screen cheat sheet.
+
+### Navigation & Selection
 | Shortcut | Action |
 |----------|--------|
 | `⇧⌘V` | Open clipboard history |
-| `↑` / `↓` | Navigate items |
-| `⇧↑` / `⇧↓` | Expand selection (Multi-select) |
-| `↵` Enter | Paste selected item |
-| `⌘C` | Copy selected item text to clipboard |
+| `↑` / `↓` | Navigate history items |
+| `⇧↑` / `⇧↓` | Multi-select items (expands / shrinks range) |
+| `⌘A` | Select all items |
+| `↵` Enter | Paste selected item to frontmost app |
+| `⎋` Esc | Dismiss Buffer window / cancel edits |
+
+### Item Actions
+| Shortcut | Action |
+|----------|--------|
+| `⌘C` | Copy selected item to clipboard and dismiss |
 | `⌘P` | Pin / unpin selected item |
 | `⌘B` | Bookmark / unbookmark selected item |
+| `⌘E` | Edit snippet inline |
 | `⌘T` | Add tag to selected item |
 | `⌘S` | Save image to disk (for image items) |
-| `⌘⌫` | Delete selected item |
-| `⎋` Esc | Close history window |
+| `⌘⌫` | Delete selected item (or multi-selected items) |
 
-### 📝 Inline Text Editing
+### Zoom & Canvas
+| Shortcut | Action |
+|----------|--------|
+| `⌘+` | Zoom in (larger rows & preview text) |
+| `⌘-` | Zoom out |
+| `⌘0` | Reset zoom to 100% |
+| `2× Click` | Toggle image actual size / fit |
+| `Pinch` / `Pan` | Zoom & navigate image canvas on trackpad |
 
-Text items can be edited directly within Buffer by clicking the **Pencil icon** in the preview/detail pane, which opens an inline text editor. While editing:
-
-- **Global keyboard shortcuts are temporarily bypassed** so you can type normally without triggering shortcuts.
-- Press **Escape**, click the **pencil icon** again, or **select a different item** in the list to **auto-save** your changes and sync them to the macOS pasteboard.
+### Application
+| Shortcut | Action |
+|----------|--------|
+| `⌘,` | Open Settings |
+| `⌘/` | Toggle keyboard shortcuts cheat sheet |
 
 ---
 
