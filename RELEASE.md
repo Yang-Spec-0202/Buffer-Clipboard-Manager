@@ -80,3 +80,33 @@ Verify that the output files are present in the project root:
      --notes-file release_notes.md
    ```
    *(Add `--prerelease` if publishing a pre-release).*
+
+---
+
+## Step 5: Modifying or Updating an Existing Release
+
+If you need to update an existing release (e.g., retagging to a newer commit, replacing binary assets, or promoting a pre-release):
+
+1. **Update and Force Push Git Tag** (if re-targeting commit):
+   ```bash
+   git tag -fa buffer-v<version> -m "release: v<version>"
+   git push origin refs/tags/buffer-v<version> --force
+   ```
+
+2. **Re-upload Asset Binaries** (overwrites existing files):
+   ```bash
+   gh release upload buffer-v<version> \
+     Buffer_Silicon.dmg Buffer_Silicon.zip \
+     Buffer_Intel.dmg Buffer_Intel.zip \
+     --clobber
+   ```
+
+3. **Update Release Metadata & Notes**:
+   ```bash
+   gh release edit buffer-v<version> \
+     --title "Buffer v<version>" \
+     --notes-file release_notes.md \
+     --prerelease=false \
+     --latest
+   ```
+
