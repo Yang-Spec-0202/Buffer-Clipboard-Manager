@@ -64,6 +64,57 @@
 
 ---
 
+## 🍺 Install with Homebrew
+
+Buffer can be installed as a Homebrew cask directly from this repository:
+
+### For Users
+
+```bash
+# 1. Tap the repository
+brew tap samirpatil2000/buffer https://github.com/samirpatil2000/Buffer.git
+
+# 2. Install Buffer
+brew install --cask buffer
+```
+
+To upgrade:
+```bash
+brew upgrade --cask buffer
+```
+
+To completely uninstall (including preferences and application support files):
+```bash
+brew uninstall --zap buffer
+```
+
+> [!TIP]
+> If a dedicated `samirpatil2000/homebrew-buffer` tap repository is configured in the future, standard one-liner `brew install --cask samirpatil2000/buffer/buffer` will also be supported.
+
+### For Maintainers
+
+The repository includes an automated script to generate and validate `Casks/buffer.rb`:
+
+```bash
+# Automatically computes SHA256 checksums from local DMGs (or remote release) and audits syntax:
+./scripts/generate_homebrew_cask.sh
+```
+
+Typical release flow:
+```bash
+# 1. Bump version in Info.plist & README.md
+# 2. Compile, sign, and notarize DMGs
+./build_dmg.sh
+
+# 3. Update Casks/buffer.rb with verified SHA256 hashes
+./scripts/generate_homebrew_cask.sh
+
+# 4. Commit and push release
+git add Info.plist README.md Casks/buffer.rb
+```
+
+---
+
 ## 🚀 Getting Started
 
 1. **Download** the `.dmg` file from above
