@@ -81,6 +81,13 @@ Verify that the output files are present in the project root:
    ```
    *(Add `--prerelease` if publishing a pre-release).*
 
+   > [!TIP]
+   > Feature screenshots for release notes should be stored in `Assets/` and embedded with responsive centered tags:
+   >
+   > <p align="center">
+   >   <img width="500" alt="History Size Tiers" src="Assets/history-size-tiers.png" />
+   > </p>
+
 ---
 
 ## Step 5: Modifying or Updating an Existing Release

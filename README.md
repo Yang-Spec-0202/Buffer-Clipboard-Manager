@@ -112,6 +112,17 @@
 </p>
 
 
+#### History Size Tiers
+
+<p align="center">
+  <img width="520" alt="History Size Tiers" src="Assets/history-size-tiers.png" />
+</p>
+
+<p align="center">
+  <em>Configurable clipboard history retention tiers: Essential (200), Deep (1,000), or Unlimited</em>
+</p>
+
+
 #### Inline Text Editing
 
 Click the **Pencil icon** in the preview/detail pane to open an inline text editor and modify any text item directly. While editing, global keyboard shortcuts are **temporarily bypassed** so you can type normally. Click **Save** to persist changes and sync them to the macOS pasteboard, or press **Escape** to cancel and cleanly discard unsaved changes.
