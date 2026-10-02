@@ -1524,10 +1524,7 @@ struct HistoryContentView: View {
         case .image:
             VStack(spacing: 12) {
                 if let img = previewImage {
-                    Image(nsImage: img)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(maxWidth: .infinity)
+                    ZoomableImageView(image: img)
                 } else {
                     // Loading placeholder
                     ProgressView()
