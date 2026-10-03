@@ -70,7 +70,8 @@ ditto -xk "$zip_path" "$zip_check"
 codesign --verify --deep --strict "$zip_check/$app_name.app"
 archs=$(lipo -archs "$app/Contents/MacOS/Buffer")
 [[ " $archs " == *" arm64 "* && " $archs " == *" x86_64 "* ]]
-shasum -a 256 "$dmg_path" "$zip_path" | tee "$release_dir/SHA256SUMS.txt"
+(cd "$release_dir" && shasum -a 256 "Buffer_${version}_Universal.dmg" "Buffer_${version}_Universal.zip" \
+    | tee SHA256SUMS.txt)
 
 echo "Universal app: $app"
 echo "DMG: $dmg_path"
