@@ -149,7 +149,7 @@ struct ClipboardItem: Identifiable, Codable, Equatable {
             }
             return text
         case .image:
-            return "Image"
+            return L10n.tr("Image")
         }
     }
     

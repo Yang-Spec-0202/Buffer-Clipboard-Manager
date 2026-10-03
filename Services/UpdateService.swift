@@ -25,13 +25,14 @@ struct UpdateInfo: Equatable {
 
 class UpdateService: ObservableObject {
     static let shared = UpdateService()
+    static var isLocalBuild: Bool { Bundle.main.object(forInfoDictionaryKey: "BufferLocalDevelopment") as? Bool == true }
 
     @Published var availableUpdate: UpdateInfo?
     @Published var isUpdating: Bool = false
 
-    private let releasesURL = URL(string: "https://api.github.com/repos/samirpatil2000/Buffer/releases")!
+    private let releasesURL = URL(string: "https://api.github.com/repos/Yang-Spec-0202/Buffer-Clipboard-Manager/releases")!
     private let lastCheckKey = "lastUpdateCheckDate"
-    let repoBaseURL = "https://github.com/samirpatil2000/Buffer"
+    let repoBaseURL = "https://github.com/Yang-Spec-0202/Buffer-Clipboard-Manager"
     private var progressWindow: NSWindow?
     private var toastWindow: NSWindow?
     private var pendingReleaseURL: URL?
@@ -50,7 +51,7 @@ class UpdateService: ObservableObject {
     private let cachedReleaseURLKey = "bufferCachedUpdateReleaseURL"
 
     private init() {
-        restoreCachedUpdateIfValid()
+        if !Self.isLocalBuild { restoreCachedUpdateIfValid() }
     }
 
     private func saveCachedUpdate(_ info: UpdateInfo) {
@@ -100,6 +101,7 @@ class UpdateService: ObservableObject {
     private var pollTimer: Timer?
 
     func startPeriodicChecking() {
+        guard !Self.isLocalBuild else { return }
         pollTimer?.invalidate()
         pollTimer = Timer.scheduledTimer(withTimeInterval: updateCheckInterval, repeats: true) { [weak self] _ in
             print("[UpdateService] Periodic poll triggered (interval: \(self?.updateCheckInterval ?? 0)s)")
@@ -147,6 +149,16 @@ class UpdateService: ObservableObject {
     }
 
     func checkForUpdates(silent: Bool) {
+        guard !Self.isLocalBuild else {
+            if !silent {
+                let alert = NSAlert()
+                alert.messageText = L10n.tr("Local development build")
+                alert.informativeText = L10n.tr("Automatic updates are disabled for this build to preserve your changes.")
+                alert.addButton(withTitle: L10n.tr("OK"))
+                alert.runModal()
+            }
+            return
+        }
         guard !isCheckingUpdates else {
             print("[UpdateService] checkForUpdates: Already in progress, ignoring call.")
             return
@@ -288,12 +300,12 @@ class UpdateService: ObservableObject {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.icon = NSApp.applicationIconImage
-        alert.messageText = "Buffer \(version) is available"
-        alert.informativeText = "A new version of Buffer is ready to download and install."
-        alert.addButton(withTitle: "Update Now")
-        alert.addButton(withTitle: "Later")
+        alert.messageText = L10n.format("Buffer %@ is available", version)
+        alert.informativeText = L10n.tr("A new version of Buffer is ready to download and install.")
+        alert.addButton(withTitle: L10n.tr("Update Now"))
+        alert.addButton(withTitle: L10n.tr("Later"))
         let response = alert.runModal()
-        print("[UpdateService] Update alert response: \(response == .alertFirstButtonReturn ? "Update Now" : "Later")")
+        print("[UpdateService] Update alert response: \(response == .alertFirstButtonReturn ? L10n.tr("Update Now") : L10n.tr("Later"))")
         if response == .alertFirstButtonReturn {
             downloadAndInstall(url: downloadURL, tag: tag)
         }
@@ -303,9 +315,9 @@ class UpdateService: ObservableObject {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.icon = NSApp.applicationIconImage
-        alert.messageText = "You're up to date"
-        alert.informativeText = "Buffer is already on the latest version."
-        alert.addButton(withTitle: "OK")
+        alert.messageText = L10n.tr("You're up to date")
+        alert.informativeText = L10n.tr("Buffer is already on the latest version.")
+        alert.addButton(withTitle: L10n.tr("OK"))
         alert.runModal()
     }
 
@@ -369,7 +381,7 @@ class UpdateService: ObservableObject {
         title.frame = NSRect(x: 0, y: 98, width: w, height: 20)
         blur.addSubview(title)
 
-        let subtitle = NSTextField(labelWithString: "The best Buffer yet.")
+        let subtitle = NSTextField(labelWithString: L10n.tr("The best Buffer yet."))
         subtitle.font = .systemFont(ofSize: 11)
         subtitle.textColor = NSColor.white.withAlphaComponent(0.55)
         subtitle.alignment = .center
@@ -382,7 +394,7 @@ class UpdateService: ObservableObject {
             : "\(repoBaseURL)/releases/tag/\(tag)"
         pendingReleaseURL = URL(string: releaseURLString)
 
-        let btn = NSButton(title: "What's New →", target: self, action: #selector(whatsNewButtonTapped))
+        let btn = NSButton(title: L10n.tr("What's New →"), target: self, action: #selector(whatsNewButtonTapped))
         btn.bezelStyle = .rounded
         btn.font = .boldSystemFont(ofSize: 12)
         let btnW: CGFloat = 150
@@ -425,6 +437,7 @@ class UpdateService: ObservableObject {
     }
 
     func downloadAndInstall(url: String, tag: String) {
+        guard !Self.isLocalBuild else { return }
         guard let downloadURL = URL(string: url) else {
             print("[UpdateService] Invalid download URL: \(url)")
             return
@@ -606,7 +619,7 @@ class UpdateService: ObservableObject {
             blur.addSubview(iconView)
 
             // Title
-            let title = NSTextField(labelWithString: "Updating Buffer...")
+            let title = NSTextField(labelWithString: L10n.tr("Updating Buffer..."))
             title.font = .boldSystemFont(ofSize: 13)
             title.textColor = .white
             title.alignment = .center
@@ -614,7 +627,7 @@ class UpdateService: ObservableObject {
             blur.addSubview(title)
 
             // Subtitle
-            let subtitle = NSTextField(labelWithString: "Downloading, please wait...")
+            let subtitle = NSTextField(labelWithString: L10n.tr("Downloading, please wait..."))
             subtitle.font = .systemFont(ofSize: 11)
             subtitle.textColor = NSColor.white.withAlphaComponent(0.55)
             subtitle.alignment = .center

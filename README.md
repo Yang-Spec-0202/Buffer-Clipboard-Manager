@@ -1,275 +1,63 @@
-<p align="center">
-  <img src="Assets/Buffer-Logo.png" alt="Buffer Logo" width="128" height="128">
-</p>
+# Buffer
 
-<h1 align="center">Buffer</h1>
+**A local-first clipboard manager for macOS, with screenshot paste for terminal AI tools.**
 
-<p align="center">
-  <strong>A lightweight, beautiful clipboard manager for macOS</strong>
-</p>
+This is an unofficial community-maintained build based on [Samir Patil's Buffer](https://github.com/samirpatil2000/Buffer). It keeps clipboard history on your Mac and adds a focused workflow for pasting screenshots into terminal TUIs such as Codex CLI and OpenCode. It is not affiliated with the original author.
 
-<p align="center">
-<a href="https://github.com/samirpatil2000/Buffer/releases/latest">
-  <img src="https://img.shields.io/badge/Download-v3.0.0-blue?style=for-the-badge&logo=apple" alt="Download">
-</a>
-<img src="https://img.shields.io/badge/macOS-13.0+-black?style=for-the-badge&logo=apple" alt="macOS 13+">
-<img src="https://img.shields.io/badge/Swift-5.9-orange?style=for-the-badge&logo=swift" alt="Swift 5.9">
-<a href="https://deepwiki.com/samirpatil2000/Buffer"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
-<br><br>
-<img src="https://img.shields.io/github/stars/samirpatil2000/Buffer?style=flat-square&color=orange&label=stars" alt="Stars">
-&nbsp;
-<img src="https://img.shields.io/github/downloads/samirpatil2000/Buffer/total?style=flat-square&color=blue&label=downloads" alt="Downloads">
-</p>
+[Download the latest macOS release](https://github.com/Yang-Spec-0202/Buffer-Clipboard-Manager/releases/latest) · [中文说明](#中文)
 
----
+- Universal macOS app for Apple Silicon and Intel; macOS 13 or later.
+- Simplified Chinese and English interface.
+- Paste one or multiple clipboard screenshots into a local terminal TUI as image paths.
+- Clipboard contents and screenshots are not uploaded. Update checks contact GitHub for release metadata.
 
-### ✨ Why Buffer?
+## 中文
 
-- **Ultra-lightweight** — Only ~2 MB download/install, minimal RAM/CPU usage  
-- **100% Private &amp; Local** — Everything stays on your Mac, no cloud, no tracking  
-- **Text + Images + OCR** — Copies anything; extracts searchable text from images/screenshots/memes using on-device Vision  
-- **Great for developers** — Handles large text snippets, JSON payloads, logs, and other verbose content with ease  
-- **Large-content friendly** — Lazy, chunked previews and disk-backed storage for multi‑MB text, with size indicators  
-- **Pins & Smart History** — Pin favorites, keep them anchored, and cycle history while prioritizing unpinned items  
-- **Multi-select & multi‑paste** — Select multiple items in history with clear on-screen instructions, paste them together, or bulk-delete with inline confirmation 
-- **Bookmarks** — Star important items with Cmd+B for quick reuse  
-- **Tags & Filtering** — Categorize history items with custom, color-coded tags. Quick tag items with `Cmd+T` and filter using `#` autocomplete in the search bar  
-- **Configurable hotkeys** — Change the global shortcut in Settings with dynamic re-registration  
-- **Native macOS Feel** — Clean SwiftUI + AppKit menu-bar app  
-- **Interactive Image Inspection Canvas** — Pinch-to-zoom, pan, double-click fit/reset, and `⌘+`/`⌘-` zoom controls for inspecting screenshots and image clips  
-- **Shortcuts Cheat Sheet & Content Zoom** — On-screen interactive shortcuts popup (`⌘/`), footer shortcuts bar, and content text zoom (`⌘+`/`⌘-`/`⌘0`)  
-- **Noise Controls & History Tiers** — Configurable history capacity tiers and automatic noise filtering to suppress rapid duplicate clips and short fragments  
-- **Seamless Updates** — Built-in secure auto-updater with in-app notification chip, release highlights popover, and post-update HUD  
-- **Inline Text Editing** — Edit any text or code snippet directly within the clipboard history window with safe cancel (`Esc`) and macOS pasteboard sync  
-- **Open Source** — MIT license, actively maintained  
+这是基于 [Samir Patil 的 Buffer](https://github.com/samirpatil2000/Buffer) 维护的非官方社区版本，保留本地剪切板历史，并重点支持把截图粘贴到 Codex CLI、OpenCode 等终端 TUI。
 
----
+### 下载与安装
 
+前往[最新 Release 页面](https://github.com/Yang-Spec-0202/Buffer-Clipboard-Manager/releases/latest)，下载 `Buffer_3.0.2_Universal.dmg`，打开后将 Buffer 拖入“应用程序”。此通用版支持 Apple Silicon 和 Intel，最低支持 macOS 13。
 
-### 📥 Download
+当前发布包使用本地 ad-hoc 签名，**没有 Apple Developer ID 签名或公证**。首次打开时，macOS 可能提示无法验证开发者。请先检查公开源码；只有在信任来源时才通过 Finder 的“按住 Control 点击 → 打开”继续。
 
-<p align="center">
-  <a href="https://github.com/samirpatil2000/Buffer/releases/download/buffer-v3.0.0/Buffer_Silicon.dmg">
-    <img src="https://img.shields.io/badge/⬇️_Apple_Silicon_DMG-v3.0.0-2ea44f?style=for-the-badge" alt="Download Buffer Silicon DMG">
-  </a>
-  &nbsp;
-  <a href="https://github.com/samirpatil2000/Buffer/releases/download/buffer-v3.0.0/Buffer_Intel.dmg">
-    <img src="https://img.shields.io/badge/⬇️_Intel_DMG-v3.0.0-8a3ffc?style=for-the-badge" alt="Download Buffer Intel DMG">
-  </a>
-</p>
+### 授权终端自动粘贴
 
-1. Download the `.dmg` from the latest release
-2. Drag **Buffer.app** to your **Applications** folder
-3. Launch it (lives in menu bar)
+Buffer 通过模拟 `⌘V` 完成自动粘贴，因此需要辅助功能授权。打开“系统设置 → 隐私与安全 → 辅助功能”，允许 Buffer；部分较新的 macOS 界面会把此项放在“设备控制和数据访问”中。未授权时内容仍会复制到剪切板，可以切回目标应用手动按 `⌘V`。
 
----
+### 粘贴截图到终端
 
-## 🍺 Install with Homebrew
+1. 将光标放在本机 Codex CLI 或 OpenCode 的输入框。
+2. 使用 Buffer 的历史快捷键（默认 `⇧⌘V`）打开剪切板历史。
+3. 选择截图并粘贴。Buffer 会将每张截图写为独立 PNG 临时文件，再把路径送入终端，让 TUI 识别为图片附件。
 
-Buffer can be installed as a Homebrew cask directly from this repository:
+图片路径只在本机有效；远程 SSH 会话无法读取本机临时文件。图片保存在系统临时目录 `BufferPaste`，由系统清理。
 
-### For Users
+### 从源码构建
 
-```bash
-# 1. Tap the repository
-brew tap samirpatil2000/buffer https://github.com/samirpatil2000/Buffer.git
+需要 macOS 及 Xcode Command Line Tools：
 
-# 2. Install Buffer
-brew install --cask buffer
+```sh
+./build_release.sh
 ```
 
-To upgrade:
-```bash
-brew upgrade --cask buffer
+产物包含通用 `.dmg` 和 `.zip`。本项目没有 Apple Developer ID 发布证书，因此构建脚本生成 ad-hoc 签名、未公证的发布包。验证代码可运行：
+
+```sh
+./scripts/test_local.sh
+python3 scripts/verify_localization.py
 ```
 
-To completely uninstall (including preferences and application support files):
-```bash
-brew uninstall --zap buffer
-```
+## English
 
-> [!TIP]
-> If a dedicated `samirpatil2000/homebrew-buffer` tap repository is configured in the future, standard one-liner `brew install --cask samirpatil2000/buffer/buffer` will also be supported.
+### Paste screenshots into a terminal TUI
 
-### For Maintainers
+Focus the input field in a **local** Codex CLI or OpenCode session, open Buffer with its configured history shortcut (default `⇧⌘V`), select a screenshot, and paste. Buffer exports each image to a separate temporary PNG and inserts its local path so the TUI can attach it as an image. Paths do not work in remote SSH sessions.
 
-The repository includes an automated script to generate and validate `Casks/buffer.rb`:
+Automatic paste simulates `⌘V` and requires Accessibility permission. Find Buffer under **System Settings → Privacy & Security → Accessibility**; some recent macOS versions group this under **Device Control & Data Access**. Without permission, the content remains on the clipboard for manual `⌘V` paste.
 
-```bash
-# Automatically computes SHA256 checksums from local DMGs (or remote release) and audits syntax:
-./scripts/generate_homebrew_cask.sh
-```
+The release is an ad-hoc signed, non-notarized community build. Review the source before installing and proceed past Gatekeeper only if you trust it. Clipboard contents and screenshots remain on your Mac; update checks fetch release metadata from GitHub.
 
-Typical release flow:
-```bash
-# 1. Bump version in Info.plist & README.md
-# 2. Compile, sign, and notarize DMGs
-./build_dmg.sh
+## Credits and license
 
-# 3. Update Casks/buffer.rb with verified SHA256 hashes
-./scripts/generate_homebrew_cask.sh
-
-# 4. Commit and push release
-git add Info.plist README.md Casks/buffer.rb
-```
-
----
-
-## 🚀 Getting Started
-
-1. **Download** the `.dmg` file from above
-2. **Drag** Buffer to your Applications folder
-3. **Launch** Buffer — it will appear in your menu bar
-4. **Copy** anything — Buffer automatically saves it
-5. Press **⇧⌘V** to access your clipboard history anytime!
-
----
-
-## 🖥️ Screenshots
-
-<p align="center">
-  <img width="919" height="864" alt="image" src="https://github.com/user-attachments/assets/ebd0d454-8362-45e4-af22-27f054ba43c6" />
-</p>
-
-
-<p align="center">
-  <em>Beautiful split-pane interface with search and preview</em>
-</p>
-
-
-#### Edit Text 
-
-<img width="800" height="539" alt="buffer-18-jun–editing" src="https://github.com/user-attachments/assets/12ec7289-0a43-453b-a0cc-ae13918fcd0b" />
-
-
-#### Multi select & paste
-
-<img width="800" height="525" alt="buffer-26-apr-v2-ezgif com-video-to-gif-converter" src="https://github.com/user-attachments/assets/5dd61f35-9b16-413d-aec9-8e89fff4f7f8" />
-
-
-#### Tags 
-
-<img width="709" height="486" alt="image" src="https://github.com/user-attachments/assets/6b1ac775-b75f-43db-8438-4170336c25cc" />
-
-
-#### Keyboard Shortcuts Cheat Sheet & Image Canvas
-
-<p align="center">
-  <img width="800" alt="Keyboard Shortcuts Cheat Sheet & Image Canvas" src="https://github.com/user-attachments/assets/44944452-b449-42ef-b8a9-439ad72cd6f7" />
-</p>
-
-<p align="center">
-  <em>Interactive shortcuts cheat sheet popover (⌘/) and interactive image inspection canvas</em>
-</p>
-
-
-#### History Size Tiers
-
-<p align="center">
-  <img width="520" alt="History Size Tiers" src="Assets/history-size-tiers.png" />
-</p>
-
-<p align="center">
-  <em>Configurable clipboard history retention tiers: Essential (200), Deep (1,000), or Unlimited</em>
-</p>
-
-
-#### Inline Text Editing
-
-Click the **Pencil icon** in the preview/detail pane to open an inline text editor and modify any text item directly. While editing, global keyboard shortcuts are **temporarily bypassed** so you can type normally. Click **Save** to persist changes and sync them to the macOS pasteboard, or press **Escape** to cancel and cleanly discard unsaved changes.
-
----
-
-## ⌨️ Keyboard Shortcuts
-
-Press `⌘/` anytime or click the **Shortcuts** button in the footer bar to open the interactive on-screen cheat sheet.
-
-### Navigation & Selection
-| Shortcut | Action |
-|----------|--------|
-| `⇧⌘V` | Open clipboard history |
-| `↑` / `↓` | Navigate history items |
-| `⇧↑` / `⇧↓` | Multi-select items (expands / shrinks range) |
-| `⌘A` | Select all items |
-| `↵` Enter | Paste selected item to frontmost app |
-| `⎋` Esc | Dismiss Buffer window / cancel edits |
-
-### Item Actions
-| Shortcut | Action |
-|----------|--------|
-| `⌘C` | Copy selected item to clipboard and dismiss |
-| `⌘P` | Pin / unpin selected item |
-| `⌘B` | Bookmark / unbookmark selected item |
-| `⌘E` | Edit snippet inline |
-| `⌘T` | Add tag to selected item |
-| `⌘S` | Save image to disk (for image items) |
-| `⌘⌫` | Delete selected item (or multi-selected items) |
-
-### Zoom & Canvas
-| Shortcut | Action |
-|----------|--------|
-| `⌘+` | Zoom in (larger rows & preview text) |
-| `⌘-` | Zoom out |
-| `⌘0` | Reset zoom to 100% |
-| `2× Click` | Toggle image actual size / fit |
-| `Pinch` / `Pan` | Zoom & navigate image canvas on trackpad |
-
-### Application
-| Shortcut | Action |
-|----------|--------|
-| `⌘,` | Open Settings |
-| `⌘/` | Toggle keyboard shortcuts cheat sheet |
-
----
-
-## 🛠️ Building from Source
-
-```bash
-# Clone the repository
-git clone https://github.com/samirpatil2000/Buffer.git
-cd Buffer
-
-# Open in Xcode
-open Buffer.xcodeproj
-
-# Build and run
-# Press ⌘R in Xcode
-```
-
-### Requirements
-- macOS 13.0 or later
-- Xcode 15.0 or later
-- Swift 5.9
-
----
-
-## Star History
-
-<a href="https://star-history.dera.page/#samirpatil2000/buffer&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://star-history.dera.page/svg?repos=samirpatil2000/buffer&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://star-history.dera.page/svg?repos=samirpatil2000/buffer&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://star-history.dera.page/svg?repos=samirpatil2000/buffer&type=date&legend=top-left" />
- </picture>
-</a>
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Feel free to:
-- Report bugs
-- Suggest features
-- Submit pull requests
-
----
-
-## 📄 License
-
-MIT License — feel free to use this project however you like.
-
----
-
-<p align="center">
-  Made with ❤️ for macOS
-</p>
+Based on [Buffer by Samir Patil](https://github.com/samirpatil2000/Buffer), distributed under the MIT License. See [LICENSE](LICENSE).

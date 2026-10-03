@@ -113,18 +113,18 @@ class ClipboardItemTests: XCTestCase {
         XCTAssertNotEqual(info1, info3)
         XCTAssertEqual(
             info1.targetReleaseURL.absoluteString,
-            "https://github.com/samirpatil2000/Buffer/releases/tag/v2.1.0"
+            "https://github.com/Yang-Spec-0202/Buffer-Clipboard-Manager/releases/tag/v2.1.0"
         )
         let infoCustom = UpdateInfo(
             version: "2.7.0",
             tag: "buffer-v2.7.0",
             downloadURL: "https://example.com/buffer-v2.7.0.zip",
             releaseNotes: "Cool stuff",
-            releaseURL: URL(string: "https://github.com/samirpatil2000/Buffer/releases/tag/buffer-v2.7.0")
+            releaseURL: URL(string: "https://github.com/Yang-Spec-0202/Buffer-Clipboard-Manager/releases/tag/buffer-v2.7.0")
         )
         XCTAssertEqual(
             infoCustom.targetReleaseURL.absoluteString,
-            "https://github.com/samirpatil2000/Buffer/releases/tag/buffer-v2.7.0"
+            "https://github.com/Yang-Spec-0202/Buffer-Clipboard-Manager/releases/tag/buffer-v2.7.0"
         )
     }
 
@@ -247,9 +247,9 @@ class ClipboardItemTests: XCTestCase {
         XCTAssertEqual(HistoryLimit.deep.maxCount, 1000)
         XCTAssertNil(HistoryLimit.unlimited.maxCount)
 
-        XCTAssertEqual(HistoryLimit.essential.subtitle, "200 items")
-        XCTAssertEqual(HistoryLimit.deep.subtitle, "1,000 items")
-        XCTAssertEqual(HistoryLimit.unlimited.subtitle, "No limit")
+        XCTAssertEqual(HistoryLimit.essential.subtitle, L10n.tr("200 items"))
+        XCTAssertEqual(HistoryLimit.deep.subtitle, L10n.tr("1,000 items"))
+        XCTAssertEqual(HistoryLimit.unlimited.subtitle, L10n.tr("No limit"))
 
         // Reductions
         XCTAssertTrue(HistoryLimit.essential.isReduction(from: .deep))
@@ -352,4 +352,3 @@ class ClipboardItemTests: XCTestCase {
         XCTAssertNil(emptyResult)
     }
 }
-

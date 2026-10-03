@@ -10,17 +10,17 @@ enum HistoryLimit: Int, CaseIterable, Codable {
     
     var label: String {
         switch self {
-        case .essential: return "Essential"
-        case .deep:      return "Deep"
-        case .unlimited: return "Unlimited"
+        case .essential: return L10n.tr("Essential")
+        case .deep:      return L10n.tr("Deep")
+        case .unlimited: return L10n.tr("Unlimited")
         }
     }
     
     var subtitle: String {
         switch self {
-        case .essential: return "200 items"
-        case .deep:      return "1,000 items"
-        case .unlimited: return "No limit"
+        case .essential: return L10n.tr("200 items")
+        case .deep:      return L10n.tr("1,000 items")
+        case .unlimited: return L10n.tr("No limit")
         }
     }
 

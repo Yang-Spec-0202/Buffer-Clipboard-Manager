@@ -18,10 +18,7 @@ class ClipboardStore: ObservableObject {
     private let fileManager = FileManager.default
     private let saveQueue = DispatchQueue(label: "com.buffer.save", qos: .utility)
     
-    private var storageDirectory: URL {
-        let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        return appSupport.appendingPathComponent("Buffer", isDirectory: true)
-    }
+    private let storageDirectory: URL
     
     private var historyFileURL: URL {
         storageDirectory.appendingPathComponent("history.json")
@@ -35,7 +32,10 @@ class ClipboardStore: ObservableObject {
         storageDirectory.appendingPathComponent("texts", isDirectory: true)
     }
     
-    init() {
+    init(storageDirectory: URL? = nil) {
+        self.storageDirectory = storageDirectory ?? FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            .appendingPathComponent("Buffer", isDirectory: true)
         ensureDirectoriesExist()
         loadHistory()
         

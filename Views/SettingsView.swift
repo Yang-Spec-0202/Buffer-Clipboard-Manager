@@ -17,15 +17,15 @@ struct SettingsView: View {
                 Image(systemName: "keyboard")
                     .font(.system(size: 22))
                     .foregroundColor(.accentColor)
-                Text("Buffer Settings")
+                Text(L10n.tr("Buffer Settings"))
                     .font(.system(size: 16, weight: .semibold))
                 Spacer()
             }
             
             // Tab Picker
             Picker("", selection: $settingsManager.selectedSettingsTab) {
-                Text("General").tag(0)
-                Text("Shortcuts").tag(1)
+                Text(L10n.tr("General")).tag(0)
+                Text(L10n.tr("Shortcuts")).tag(1)
             }
             .pickerStyle(.segmented)
             
@@ -39,16 +39,16 @@ struct SettingsView: View {
         }
         .padding(22)
         .frame(width: 380)
-        .alert("Reduce History Limit?", isPresented: $showingTrimAlert) {
-            Button("Cancel", role: .cancel) { }
-            Button("Reduce & Delete", role: .destructive) {
+        .alert(L10n.tr("Reduce History Limit?"), isPresented: $showingTrimAlert) {
+            Button(L10n.tr("Cancel"), role: .cancel) { }
+            Button(L10n.tr("Reduce & Delete"), role: .destructive) {
                 if let tier = pendingTier {
                     settings.historyLimit = tier
                     settings.save()
                 }
             }
         } message: {
-            Text("This will permanently delete your oldest unbookmarked items to fit the new size. This action cannot be undone.")
+            Text(L10n.tr("This will permanently delete your oldest unbookmarked items to fit the new size. This action cannot be undone."))
         }
         .background(KeyRecorder(isRecording: $isRecording) { keyCode, modifiers in
             settings.hotkeyKeyCode = keyCode
@@ -62,7 +62,7 @@ struct SettingsView: View {
         VStack(spacing: 20) {
             // Hotkey section
             VStack(alignment: .leading, spacing: 12) {
-                Text("Keyboard Shortcut")
+                Text(L10n.tr("Keyboard Shortcut"))
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.secondary)
                 
@@ -86,7 +86,7 @@ struct SettingsView: View {
                     )
                     
                     Button(action: { isRecording.toggle() }) {
-                        Text(isRecording ? "Cancel" : "Change")
+                        Text(isRecording ? L10n.tr("Cancel") : L10n.tr("Change"))
                             .font(.system(size: 12, weight: .medium))
                     }
                     .buttonStyle(.bordered)
@@ -95,7 +95,7 @@ struct SettingsView: View {
                 }
                 
                 if isRecording {
-                    Text("Press your new shortcut...")
+                    Text(L10n.tr("Press your new shortcut..."))
                         .font(.system(size: 11))
                         .foregroundColor(.accentColor)
                 }
@@ -105,7 +105,7 @@ struct SettingsView: View {
             
             // Preset shortcuts
             VStack(alignment: .leading, spacing: 8) {
-                Text("Quick Presets")
+                Text(L10n.tr("Quick Presets"))
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.secondary)
                 
@@ -121,12 +121,12 @@ struct SettingsView: View {
             
             // System section
             VStack(alignment: .leading, spacing: 12) {
-                Text("System")
+                Text(L10n.tr("System"))
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.secondary)
                 
                 HStack {
-                    Text("Launch at Login")
+                    Text(L10n.tr("Launch at Login"))
                         .font(.system(size: 13, weight: .medium))
                     Spacer()
                     Toggle("", isOn: $settings.launchAtLogin)
@@ -141,11 +141,13 @@ struct SettingsView: View {
                 }
                 
                 HStack {
-                    Text("Include Pre-release Updates")
+                    Text(UpdateService.isLocalBuild ? L10n.tr("Local development build") : L10n.tr("Include Pre-release Updates"))
                         .font(.system(size: 13, weight: .medium))
                     Spacer()
                     Toggle("", isOn: $settings.includePrereleases)
                         .labelsHidden()
+                        .disabled(UpdateService.isLocalBuild)
+                        .help(UpdateService.isLocalBuild ? L10n.tr("Automatic updates are disabled for this build to preserve your changes.") : "")
                         .onChange(of: settings.includePrereleases) { newValue in
                             settings.save()
                             if newValue {
@@ -156,7 +158,7 @@ struct SettingsView: View {
                 }
 
                 HStack {
-                    Text("Hide Menu Bar Icon")
+                    Text(L10n.tr("Hide Menu Bar Icon"))
                         .font(.system(size: 13, weight: .medium))
                     Spacer()
                     Toggle("", isOn: $settings.hideStatusBar)
@@ -171,18 +173,18 @@ struct SettingsView: View {
                 Divider()
                     .padding(.vertical, 4)
 
-                Text("History Filtering")
+                Text(L10n.tr("History Filtering"))
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.secondary)
 
                 HStack {
-                    Text("Ignore entries shorter than")
+                    Text(L10n.tr("Ignore entries shorter than"))
                         .font(.system(size: 13, weight: .medium))
                     Spacer()
                     Stepper(
                         settings.minTextLength == 1
-                            ? "1 character"
-                            : "\(settings.minTextLength) characters",
+                            ? L10n.format("%d characters", 1)
+                            : L10n.format("%d characters", settings.minTextLength),
                         value: $settings.minTextLength,
                         in: 1...20
                     )
@@ -193,7 +195,7 @@ struct SettingsView: View {
                 }
 
                 HStack {
-                    Text("Deduplicate History")
+                    Text(L10n.tr("Deduplicate History"))
                         .font(.system(size: 13, weight: .medium))
                     Spacer()
                     Toggle("", isOn: $settings.deduplicateHistory)
@@ -208,7 +210,7 @@ struct SettingsView: View {
                 Divider()
                     .padding(.vertical, 4)
                 
-                Text("History Size")
+                Text(L10n.tr("History Size"))
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.secondary)
                 
@@ -265,24 +267,24 @@ struct SettingsView: View {
 
             // About
             VStack(spacing: 6) {
-                Text("Designed to disappear. Built to remember.")
+                Text(L10n.tr("Designed to disappear. Built to remember."))
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.secondary.opacity(0.5))
                     .italic()
 
-                Text("Buffer \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "") · by @samirpatil2000")
+                Text("Buffer \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "") · \(L10n.tr("community build based on @samirpatil2000"))")
                     .font(.system(size: 10))
                     .foregroundColor(.secondary.opacity(0.4))
 
                 HStack(spacing: 8) {
-                    Link("⭐ Star on GitHub", destination: URL(string: "https://github.com/samirpatil2000/Buffer")!)
+                    Link(L10n.tr("⭐ Star on GitHub"), destination: URL(string: "https://github.com/Yang-Spec-0202/Buffer-Clipboard-Manager")!)
                         .font(.system(size: 10, weight: .medium))
 
                     Text("·")
                         .font(.system(size: 10))
                         .foregroundColor(.secondary.opacity(0.4))
 
-                    Link("Report an Issue", destination: URL(string: "https://github.com/samirpatil2000/Buffer/issues/new")!)
+                    Link(L10n.tr("Report an Issue"), destination: URL(string: "https://github.com/Yang-Spec-0202/Buffer-Clipboard-Manager/issues/new")!)
                         .font(.system(size: 10, weight: .medium))
                 }
             }

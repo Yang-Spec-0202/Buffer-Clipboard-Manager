@@ -237,6 +237,6 @@ struct ZoomableImageView: View {
             .aspectRatio(aspectRatio, contentMode: .fit)
             .frame(maxWidth: .infinity)
             .clipShape(RoundedRectangle(cornerRadius: 6))
-            .help("Double-click to toggle 100% actual size • Pinch to zoom • Drag to pan")
+            .help(L10n.tr("Double-click to toggle 100% actual size • Pinch to zoom • Drag to pan"))
     }
 }

@@ -36,7 +36,7 @@ struct ClipboardListView: View {
                     if items.contains(where: { $0.isPinned }) {
                         HStack(spacing: 4) {
                             Image(systemName: "pin")
-                            Text("Pinned")
+                            Text(L10n.tr("Pinned"))
                         }
                         .font(.system(size: 10).smallCaps())
                         .foregroundColor(.secondary)

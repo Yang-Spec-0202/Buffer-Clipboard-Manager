@@ -68,6 +68,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             UpdateService.shared.checkOnLaunchIfNeeded()
             UpdateService.shared.startPeriodicChecking()
         }
+
+        // The local test build inherits preferences (including a hidden menu icon), so
+        // show its interface on launch to make the installed development version discoverable.
+        if UpdateService.isLocalBuild {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                self?.showHistoryWindow()
+            }
+        }
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        showHistoryWindow()
+        return false
     }
     
     func applicationWillTerminate(_ notification: Notification) {
@@ -104,7 +117,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         let hostingController = NSHostingController(rootView: SettingsView())
         let window = NSWindow(contentViewController: hostingController)
-        window.title = "Settings"
+        window.title = L10n.tr("Settings")
         window.styleMask = [.titled, .closable]
         window.isReleasedWhenClosed = false
         window.center()

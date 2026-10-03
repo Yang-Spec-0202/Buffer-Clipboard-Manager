@@ -70,25 +70,25 @@ class StatusBarController {
         // Show current shortcut
         let settings = SettingsManager.shared
         let shortcutDisplay = "\(settings.hotkeyModifiers.displayString)\(keyCodeNames[settings.hotkeyKeyCode] ?? "?")"
-        let shortcutItem = NSMenuItem(title: "Shortcut: \(shortcutDisplay)", action: nil, keyEquivalent: "")
+        let shortcutItem = NSMenuItem(title: L10n.format("Shortcut: %@", shortcutDisplay), action: nil, keyEquivalent: "")
         shortcutItem.isEnabled = false
         menu.addItem(shortcutItem)
         
         menu.addItem(NSMenuItem.separator())
         
         // Settings
-        let settingsItem = NSMenuItem(title: "Settings...", action: #selector(showSettings), keyEquivalent: ",")
+        let settingsItem = NSMenuItem(title: L10n.tr("Settings..."), action: #selector(showSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
 
-        let updateItem = NSMenuItem(title: "Check for Updates...", action: #selector(checkForUpdates), keyEquivalent: "")
+        let updateItem = NSMenuItem(title: L10n.tr("Check for Updates..."), action: #selector(checkForUpdates), keyEquivalent: "")
         updateItem.target = self
         menu.addItem(updateItem)
 
         menu.addItem(NSMenuItem.separator())
         
         // Pause/Resume
-        let pauseTitle = watcher.isPaused ? "Resume Capture" : "Pause Capture"
+        let pauseTitle = watcher.isPaused ? L10n.tr("Resume Capture") : L10n.tr("Pause Capture")
         let pauseItem = NSMenuItem(title: pauseTitle, action: #selector(togglePause), keyEquivalent: "")
         pauseItem.target = self
         menu.addItem(pauseItem)
@@ -96,14 +96,14 @@ class StatusBarController {
         menu.addItem(NSMenuItem.separator())
         
         // Clear History
-        let clearItem = NSMenuItem(title: "Clear History", action: #selector(clearHistory), keyEquivalent: "")
+        let clearItem = NSMenuItem(title: L10n.tr("Clear History"), action: #selector(clearHistory), keyEquivalent: "")
         clearItem.target = self
         menu.addItem(clearItem)
         
         menu.addItem(NSMenuItem.separator())
         
         // Quit
-        let quitItem = NSMenuItem(title: "Quit Buffer", action: #selector(quit), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: L10n.tr("Quit Buffer"), action: #selector(quit), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
         
@@ -133,21 +133,21 @@ class StatusBarController {
     @objc private func checkboxToggled(_ sender: NSButton) {
         guard let alert = activeAlert else { return }
         if sender.state == .on {
-            alert.informativeText = "This will permanently delete all unpinned, unbookmarked, and untagged items."
+            alert.informativeText = L10n.tr("This will permanently delete all unpinned, unbookmarked, and untagged items.")
         } else {
-            alert.informativeText = "This will permanently delete all clipboard items, including pinned, bookmarked, and tagged items."
+            alert.informativeText = L10n.tr("This will permanently delete all clipboard items, including pinned, bookmarked, and tagged items.")
         }
     }
     
     @objc private func clearHistory() {
         let alert = NSAlert()
-        alert.messageText = "Clear Clipboard History?"
-        alert.informativeText = "This will permanently delete all unpinned, unbookmarked, and untagged items."
+        alert.messageText = L10n.tr("Clear Clipboard History?")
+        alert.informativeText = L10n.tr("This will permanently delete all unpinned, unbookmarked, and untagged items.")
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "Clear")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: L10n.tr("Clear"))
+        alert.addButton(withTitle: L10n.tr("Cancel"))
         
-        let checkbox = NSButton(checkboxWithTitle: "Keep pinned, bookmarked, and tagged items", target: self, action: #selector(checkboxToggled(_:)))
+        let checkbox = NSButton(checkboxWithTitle: L10n.tr("Keep pinned, bookmarked, and tagged items"), target: self, action: #selector(checkboxToggled(_:)))
         checkbox.state = .on
         checkbox.sizeToFit()
         checkbox.frame = NSRect(x: 0, y: 0, width: max(checkbox.frame.width, 350), height: 24)

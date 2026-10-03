@@ -32,6 +32,7 @@ class HistoryWindowController: NSWindowController {
 
     private let store: ClipboardStore
     private var previousApp: NSRunningApplication?
+    private var activationObserver: NSObjectProtocol?
 
     /// Timestamp of the last close — used to decide whether to persist search state
     private var lastClosedAt: Date?
@@ -65,6 +66,22 @@ class HistoryWindowController: NSWindowController {
         
         setupPanel(panel)
         setupContent()
+        rememberDestination(NSWorkspace.shared.frontmostApplication)
+        activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
+        ) { [weak self] notification in
+            guard self?.window?.isVisible != true else { return }
+            self?.rememberDestination(notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)
+        }
+    }
+
+    deinit {
+        if let activationObserver { NSWorkspace.shared.notificationCenter.removeObserver(activationObserver) }
+    }
+
+    private func rememberDestination(_ app: NSRunningApplication?) {
+        guard let app, app.processIdentifier != ProcessInfo.processInfo.processIdentifier else { return }
+        previousApp = app
     }
 
     override func close() {
@@ -155,31 +172,27 @@ class HistoryWindowController: NSWindowController {
     }
     
     private func copyToClipboard(_ item: ClipboardItem) {
-        NotificationCenter.default.post(name: .bufferIgnoreNextChange, object: nil)
         PasteController.copyToClipboard(item, store: store)
     }
     
     private func copyMultipleToClipboard(_ items: [ClipboardItem]) {
-        NotificationCenter.default.post(name: .bufferIgnoreNextChange, object: nil)
         PasteController.copyMultipleToClipboard(items, store: store)
     }
     
     private func pasteItem(_ item: ClipboardItem) {
         let appToRestore = previousApp
         close()
-        NotificationCenter.default.post(name: .bufferIgnoreNextChange, object: nil)
         PasteController.paste(item, store: store, previousApp: appToRestore)
     }
     
     private func pasteMultiple(_ items: [ClipboardItem]) {
         let appToRestore = previousApp
         close()
-        NotificationCenter.default.post(name: .bufferIgnoreNextChange, object: nil)
         PasteController.pasteMultiple(items, store: store, previousApp: appToRestore)
     }
     
     override func showWindow(_ sender: Any?) {
-        previousApp = NSWorkspace.shared.frontmostApplication
+        rememberDestination(NSWorkspace.shared.frontmostApplication)
         // Compute reset decision *before* super.showWindow fires didBecomeKeyNotification
         // → bufferWindowDidOpen, so the content view onReceive handler sees the right value.
         shouldResetOnOpen = shouldResetSearch
@@ -499,7 +512,7 @@ struct HistoryContentView: View {
         openPanel.canChooseDirectories = true
         openPanel.canChooseFiles = false
         openPanel.canCreateDirectories = true
-        openPanel.title = "Select Folder to Save Images"
+        openPanel.title = L10n.tr("Select Folder to Save Images")
         openPanel.prompt = "Select"
         
         // Use the newer sheet modal approach
@@ -1059,7 +1072,7 @@ struct HistoryContentView: View {
                     .stroke(TagChip.color(for: tag).opacity(0.2), lineWidth: 0.5))
             }
 
-            TextField(store.allTags.isEmpty ? "Search clipboard…" : "Search or #tag…", text: $searchText)
+            TextField(store.allTags.isEmpty ? L10n.tr("Search clipboard…") : L10n.tr("Search or #tag…"), text: $searchText)
                 .textFieldStyle(.plain)
                 .font(.system(size: 13))
                 .focused($isSearchFocused)
@@ -1080,7 +1093,7 @@ struct HistoryContentView: View {
             }
 
             // Item count
-            Text("\(filteredItems.count) items")
+            Text(L10n.format("%d items", filteredItems.count))
                 .font(.system(size: 11, weight: .regular))
                 .foregroundColor(.secondary.opacity(0.6))
 
@@ -1096,7 +1109,7 @@ struct HistoryContentView: View {
                     )
             }
             .buttonStyle(.plain)
-            .help("Settings (⌘,)")
+            .help(L10n.tr("Settings (⌘,)"))
             .onHover { isSettingsHovered = $0 }
         }
         .padding(.horizontal, 14)
@@ -1117,7 +1130,7 @@ struct HistoryContentView: View {
             if filteredItems.isEmpty {
                 VStack {
                     Spacer()
-                    Text(searchText.isEmpty && activeTagFilter == nil ? "No clipboard history" : "No matches")
+                    Text(searchText.isEmpty && activeTagFilter == nil ? L10n.tr("No clipboard history") : L10n.tr("No matches"))
                         .foregroundColor(.secondary)
                     Spacer()
                 }
@@ -1153,7 +1166,7 @@ struct HistoryContentView: View {
                     // Multi-selection header
                     HStack(spacing: 6) {
                         Image(systemName: "checkmark.circle")
-                        Text("\(selectionCount) items selected")
+                        Text(L10n.format("%d items selected", selectionCount))
                     }
                     .font(.system(size: 11, weight: .medium))
                     .padding(.horizontal, 8)
@@ -1164,7 +1177,7 @@ struct HistoryContentView: View {
                     // Single selection header
                     if isEditing {
                         HStack(spacing: 6) {
-                            Text("Editing")
+                            Text(L10n.tr("Editing"))
                         }
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.white)
@@ -1174,10 +1187,10 @@ struct HistoryContentView: View {
                         .cornerRadius(4)
                     } else {
                         HStack(spacing: 6) {
-                            Text(item.type == .text ? "Text" : "Image")
+                            Text(item.type == .text ? L10n.tr("Text") : L10n.tr("Image"))
                             
                             if item.isFileBacked {
-                                Text("Large")
+                                Text(L10n.tr("Large"))
                                     .font(.system(size: 10, weight: .bold))
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 4)
@@ -1229,7 +1242,7 @@ struct HistoryContentView: View {
                         }
                         .buttonStyle(.plain)
                         .foregroundColor(.red.opacity(0.85))
-                        .help("Delete \(selectionCount) selected items (⌘⌫)")
+                        .help(L10n.format("Delete %d selected items (⌘⌫)", selectionCount))
                     }
                     .font(.system(size: 13))
                 } else {
@@ -1242,7 +1255,7 @@ struct HistoryContentView: View {
                             }
                             .buttonStyle(.plain)
                             .foregroundColor(.secondary)
-                            .help("Cancel editing (Esc)")
+                            .help(L10n.tr("Cancel editing (Esc)"))
 
                             Button(action: {
                                 exitEditMode(save: true)
@@ -1251,7 +1264,7 @@ struct HistoryContentView: View {
                             }
                             .buttonStyle(.plain)
                             .foregroundColor(.blue)
-                            .help("Save changes (⌘Return or ⌘E)")
+                            .help(L10n.tr("Save changes (⌘Return or ⌘E)"))
                         } else {
                             if let item = selectedItem, item.isEditable {
                                 Button(action: {
@@ -1261,7 +1274,7 @@ struct HistoryContentView: View {
                                 }
                                 .buttonStyle(.plain)
                                 .foregroundColor(.primary)
-                                .help("Edit item (⌘E)")
+                                .help(L10n.tr("Edit item (⌘E)"))
                             }
 
                             Button(action: {
@@ -1273,7 +1286,7 @@ struct HistoryContentView: View {
                                 Image(systemName: "doc.on.doc")
                             }
                             .buttonStyle(.plain)
-                            .help("Copy (⌘C)")
+                            .help(L10n.tr("Copy (⌘C)"))
                             
                             if selectedItem?.type == .image && previewImage != nil {
                                 Button(action: {
@@ -1282,7 +1295,7 @@ struct HistoryContentView: View {
                                     Image(systemName: "arrow.down.to.line")
                                 }
                                 .buttonStyle(.plain)
-                                .help("Save image")
+                                .help(L10n.tr("Save image"))
                             }
                             
                             // OCR button — only for image items without existing OCR text
@@ -1301,7 +1314,7 @@ struct HistoryContentView: View {
                                 }
                                 .buttonStyle(.plain)
                                 .disabled(isExtractingText)
-                                .help("Extract Text from Image")
+                                .help(L10n.tr("Extract Text from Image"))
                             }
                             
                             Button(action: { if let item = selectedItem { store.togglePin(for: item) } }) {
@@ -1309,20 +1322,20 @@ struct HistoryContentView: View {
                             }
                             .buttonStyle(.plain)
                             .foregroundColor(selectedItem?.isPinned == true ? .accentColor : .secondary)
-                            .help(selectedItem?.isPinned == true ? "Unpin (⌘P)" : "Pin to top (⌘P)")
+                            .help(selectedItem?.isPinned == true ? L10n.tr("Unpin (⌘P)") : L10n.tr("Pin to top (⌘P)"))
 
                             Button(action: { if let item = selectedItem { store.toggleBookmark(for: item) } }) {
                                 Image(systemName: selectedItem?.isBookmarked == true ? "bookmark.fill" : "bookmark")
                             }
                             .buttonStyle(.plain)
                             .foregroundColor(selectedItem?.isBookmarked == true ? .yellow : .secondary)
-                            .help(selectedItem?.isBookmarked == true ? "Remove bookmark (⌘B)" : "Bookmark — protect from deletion (⌘B)")
+                            .help(selectedItem?.isBookmarked == true ? L10n.tr("Remove bookmark (⌘B)") : L10n.tr("Bookmark — protect from deletion (⌘B)"))
                             
                             Button(action: { if let item = selectedItem { store.delete(item) } }) {
                                 Image(systemName: "trash")
                             }
                             .buttonStyle(.plain)
-                            .help("Delete")
+                            .help(L10n.tr("Delete"))
                         }
                     }
                     .foregroundColor(.secondary)
@@ -1358,7 +1371,7 @@ struct HistoryContentView: View {
                                 }
                             }
                     } else {
-                        Text("Select an item")
+                        Text(L10n.tr("Select an item"))
                             .foregroundColor(.secondary)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
@@ -1379,7 +1392,7 @@ struct HistoryContentView: View {
             // Count breakdown
             HStack(spacing: 20) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Items")
+                    Text(L10n.tr("Items"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary.opacity(0.7))
                     Text("\(selectionCount)")
@@ -1388,7 +1401,7 @@ struct HistoryContentView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Total Size")
+                    Text(L10n.tr("Total Size"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary.opacity(0.7))
                     Text(formattedByteCount(selectedItemsTotalSize))
@@ -1410,7 +1423,7 @@ struct HistoryContentView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "doc.text")
                             .foregroundColor(.secondary)
-                        Text("\(textCount) text \(textCount == 1 ? "item" : "items")")
+                        Text(L10n.format("%d text items", textCount))
                             .font(.system(size: 12))
                     }
                 }
@@ -1419,7 +1432,7 @@ struct HistoryContentView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "photo")
                             .foregroundColor(.secondary)
-                        Text("\(imageCount) image \(imageCount == 1 ? "item" : "items")")
+                        Text(L10n.format("%d image items", imageCount))
                             .font(.system(size: 12))
                     }
                 }
@@ -1432,7 +1445,7 @@ struct HistoryContentView: View {
                 Button(action: downloadAllImages) {
                     HStack(spacing: 8) {
                         Image(systemName: "arrow.down.to.line")
-                        Text("Download All (\(imageCount))")
+                        Text(L10n.format("Download All (%d)", imageCount))
                         Spacer()
                     }
                     .frame(maxWidth: .infinity)
@@ -1446,7 +1459,7 @@ struct HistoryContentView: View {
             // First selected item preview (optional)
             if let firstItem = selectedItems.first, firstItem.type == .text {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("First item preview")
+                    Text(L10n.tr("First item preview"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary.opacity(0.7))
                     
@@ -1464,7 +1477,7 @@ struct HistoryContentView: View {
             if showDeleteConfirmation {
                 // Inline confirmation — avoids NSPanel key-resign issue with .alert
                 VStack(spacing: 8) {
-                    Text("Delete \(selectionCount) items permanently?")
+                    Text(L10n.format("Delete %d items permanently?", selectionCount))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.primary.opacity(0.85))
                     
@@ -1474,7 +1487,7 @@ struct HistoryContentView: View {
                                 showDeleteConfirmation = false
                             }
                         }) {
-                            Text("Cancel")
+                            Text(L10n.tr("Cancel"))
                                 .font(.system(size: 11, weight: .medium))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 5)
@@ -1494,7 +1507,7 @@ struct HistoryContentView: View {
                             store.delete(selectedItems)
                             showDeleteConfirmation = false
                         }) {
-                            Text("Delete")
+                            Text(L10n.tr("Delete"))
                                 .font(.system(size: 11, weight: .semibold))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 5)
@@ -1517,7 +1530,7 @@ struct HistoryContentView: View {
                 }) {
                     HStack(spacing: 6) {
                         Image(systemName: "trash")
-                        Text("Delete \(selectionCount) Items...")
+                        Text(L10n.format("Delete %d Items...", selectionCount))
                     }
                     .foregroundColor(isDeleteHovered ? .red : .secondary.opacity(0.7))
                     .contentShape(Rectangle())
@@ -1543,7 +1556,7 @@ struct HistoryContentView: View {
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .topLeading)
                     
-                    Label("Content was too large to store (\(formattedSize(bytes: item.originalSizeBytes ?? 0))). Showing first 500 characters.", systemImage: "exclamationmark.triangle")
+                    Label(L10n.format("Content was too large to store (%@). Showing first 500 characters.", formattedSize(bytes: item.originalSizeBytes ?? 0)), systemImage: "exclamationmark.triangle")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                         .padding(.top, 4)
@@ -1599,7 +1612,7 @@ struct HistoryContentView: View {
                                     .foregroundColor(.secondary.opacity(0.6))
                             }
                             .buttonStyle(.plain)
-                            .help("Copy extracted text")
+                            .help(L10n.tr("Copy extracted text"))
                         }
                         .padding(.top, 12)
                     }
@@ -1623,7 +1636,7 @@ struct HistoryContentView: View {
             } else if chunkedText.hasMore {
                 // This hint fires .onAppear only when it scrolls into view (LazyVStack)
                 // That's what triggers the next chunk load
-                Text("— \(formattedByteCount(chunkedText.totalBytes)) total · scroll to load more —")
+                Text(L10n.format("— %@ total · scroll to load more —", formattedByteCount(chunkedText.totalBytes)))
                     .font(.system(size: 11))
                     .foregroundColor(.secondary.opacity(0.4))
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -1734,7 +1747,7 @@ struct HistoryContentView: View {
                     )
             }
             .buttonStyle(.plain)
-            .help("Next item (↓)")
+            .help(L10n.tr("Next item (↓)"))
             
             Button(action: navigateUp) {
                 Image(systemName: "chevron.up")
@@ -1752,7 +1765,7 @@ struct HistoryContentView: View {
                     )
             }
             .buttonStyle(.plain)
-            .help("Previous item (↑)")
+            .help(L10n.tr("Previous item (↑)"))
         }
     }
 
@@ -1761,7 +1774,7 @@ struct HistoryContentView: View {
             HStack(spacing: 5) {
                 Image(systemName: "info.circle")
                     .font(.system(size: 11, weight: .medium))
-                Text("Shortcuts")
+                Text(L10n.tr("Shortcuts"))
                     .font(.system(size: 11, weight: .medium))
             }
             .foregroundColor(isShortcutsHovered ? .primary : .secondary.opacity(0.75))
@@ -1778,7 +1791,7 @@ struct HistoryContentView: View {
             )
         }
         .buttonStyle(.plain)
-        .help("Keyboard Shortcuts (⌘/)")
+        .help(L10n.tr("Keyboard Shortcuts (⌘/)"))
         .onHover { isShortcutsHovered = $0 }
         .popover(isPresented: $showShortcutsPopover, arrowEdge: .bottom) {
             ShortcutsCheatSheetView(onOpenSettings: {
@@ -1796,14 +1809,14 @@ struct HistoryContentView: View {
                 Color.primary.opacity(0.1)
                     .frame(width: 1, height: 14)
                 
-                Text("Editing")
+                Text(L10n.tr("Editing"))
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(.accentColor)
                 
                 HStack(spacing: 3) {
                     Text("Esc")
                         .font(.system(size: 10, design: .monospaced))
-                    Text("cancel")
+                    Text(L10n.tr("cancel"))
                         .font(.system(size: 10))
                 }
                 .foregroundColor(.secondary.opacity(0.6))
@@ -1811,7 +1824,7 @@ struct HistoryContentView: View {
                 HStack(spacing: 3) {
                     Text("⌘↵")
                         .font(.system(size: 10, design: .monospaced))
-                    Text("save")
+                    Text(L10n.tr("save"))
                         .font(.system(size: 10))
                 }
                 .foregroundColor(.secondary.opacity(0.6))
@@ -1821,7 +1834,7 @@ struct HistoryContentView: View {
                 Color.primary.opacity(0.1)
                     .frame(width: 1, height: 14)
                 
-                Text("\(selectionCount) items selected")
+                Text(L10n.format("%d items selected", selectionCount))
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.secondary.opacity(0.8))
             }
@@ -1870,12 +1883,12 @@ struct HistoryContentView: View {
                         }
                         if showTagInput {
                             HStack(spacing: 6) {
-                                TextField("tag name", text: $tagInputText)
+                                TextField(L10n.tr("tag name"), text: $tagInputText)
                                     .textFieldStyle(.plain)
                                     .font(.system(size: 11))
                                     .focused($isTagInputFocused)
                                     .frame(minWidth: 60)
-                                Button("Cancel") {
+                                Button(L10n.tr("Cancel")) {
                                     tagInputText = ""
                                     showTagInput = false
                                 }
@@ -1888,7 +1901,7 @@ struct HistoryContentView: View {
                                 HStack(spacing: 5) {
                                     Image(systemName: "plus")
                                         .font(.system(size: 9, weight: .bold))
-                                    Text("Add tag")
+                                    Text(L10n.tr("Add tag"))
                                         .font(.system(size: 11))
                                     Text("⌘T")
                                         .font(.system(size: 10))
@@ -1942,12 +1955,12 @@ struct HistoryContentView: View {
                 if updateService.isUpdating {
                     ProgressView()
                         .controlSize(.mini)
-                    Text("Updating…")
+                    Text(L10n.tr("Updating…"))
                         .font(.system(size: 11, weight: .medium))
                 } else {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 10, weight: .semibold))
-                    Text("Update v\(update.version)")
+                    Text(L10n.format("Update v%@", update.version))
                         .font(.system(size: 11, weight: .medium))
                 }
             }
@@ -1966,7 +1979,7 @@ struct HistoryContentView: View {
         .buttonStyle(.plain)
         .onHover { isUpdateChipHovered = $0 }
         .disabled(updateService.isUpdating)
-        .help("Buffer v\(update.version) is ready to install")
+        .help(L10n.format("Buffer v%@ is ready to install", update.version))
         .popover(isPresented: $showUpdatePopover, arrowEdge: .bottom) {
             UpdatePopoverView(
                 update: update,
@@ -2084,7 +2097,7 @@ struct UpdatePopoverView: View {
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.primary)
 
-                        Text("New")
+                        Text(L10n.tr("New"))
                             .font(.system(size: 9, weight: .bold))
                             .foregroundColor(Color(red: 0.16, green: 0.65, blue: 0.35))
                             .padding(.horizontal, 5)
@@ -2093,7 +2106,7 @@ struct UpdatePopoverView: View {
                             .cornerRadius(4)
                     }
 
-                    Text("A new version is ready to install")
+                    Text(L10n.tr("A new version is ready to install"))
                         .font(.system(size: 11.5))
                         .foregroundColor(.secondary)
                 }
@@ -2130,7 +2143,7 @@ struct UpdatePopoverView: View {
                     )
                 }
             } else {
-                Text("Includes performance improvements, bug fixes, and general refinements.")
+                Text(L10n.tr("Includes performance improvements, bug fixes, and general refinements."))
                     .font(.system(size: 11.5))
                     .foregroundColor(.secondary)
                     .lineSpacing(2)
@@ -2142,7 +2155,7 @@ struct UpdatePopoverView: View {
                 NSWorkspace.shared.open(update.targetReleaseURL)
             }) {
                 HStack(spacing: 3) {
-                    Text("View full changelog")
+                    Text(L10n.tr("View full changelog"))
                         .font(.system(size: 11))
                     Image(systemName: "arrow.up.right")
                         .font(.system(size: 9, weight: .medium))
@@ -2154,7 +2167,7 @@ struct UpdatePopoverView: View {
             // Action Buttons
             HStack(spacing: 10) {
                 Button(action: onDismiss) {
-                    Text("Later")
+                    Text(L10n.tr("Later"))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.secondary)
                         .padding(.horizontal, 12)
@@ -2175,12 +2188,12 @@ struct UpdatePopoverView: View {
                         if isUpdating {
                             ProgressView()
                                 .controlSize(.mini)
-                            Text("Updating…")
+                            Text(L10n.tr("Updating…"))
                                 .font(.system(size: 12, weight: .semibold))
                         } else {
                             Image(systemName: "arrow.triangle.2.circlepath")
                                 .font(.system(size: 10, weight: .semibold))
-                            Text("Update & Restart")
+                            Text(L10n.tr("Update & Restart"))
                                 .font(.system(size: 12, weight: .semibold))
                         }
                     }
@@ -2497,36 +2510,35 @@ struct RelativeTimestampView: View {
     private func timeAgo(from date: Date, relativeTo now: Date) -> String {
         let diff = now.timeIntervalSince(date)
         if diff < 1 {
-            return "just now"
+            return L10n.tr("just now")
         } else if diff < 60 {
             let seconds = Int(diff)
-            return "\(seconds) second\(seconds == 1 ? "" : "s") ago"
+            return L10n.format(seconds == 1 ? "%d second ago" : "%d seconds ago", seconds)
         } else if diff < 3600 {
             let minutes = Int(diff / 60)
-            return "\(minutes) minute\(minutes == 1 ? "" : "s") ago"
+            return L10n.format(minutes == 1 ? "%d minute ago" : "%d minutes ago", minutes)
         } else if diff < 86400 {
             let hours = diff / 3600
             let roundedHours = (hours * 2).rounded() / 2
             if roundedHours == 1.0 {
-                return "1 hour ago"
+                return L10n.tr("1 hour ago")
             } else if roundedHours.truncatingRemainder(dividingBy: 1) == 0 {
-                return "\(Int(roundedHours)) hours ago"
+                return L10n.format("%d hours ago", Int(roundedHours))
             } else {
-                return "\(roundedHours) hours ago"
+                return L10n.format("%.1f hours ago", roundedHours)
             }
         } else if diff < 604800 {
             let days = Int(diff / 86400)
-            return "\(days) day\(days == 1 ? "" : "s") ago"
+            return L10n.format(days == 1 ? "%d day ago" : "%d days ago", days)
         } else if diff < 2592000 {
             let weeks = Int(diff / 604800)
-            return "\(weeks) week\(weeks == 1 ? "" : "s") ago"
+            return L10n.format(weeks == 1 ? "%d week ago" : "%d weeks ago", weeks)
         } else if diff < 31536000 {
             let months = Int(diff / 2592000)
-            return "\(months) month\(months == 1 ? "" : "s") ago"
+            return L10n.format(months == 1 ? "%d month ago" : "%d months ago", months)
         } else {
             let years = Int(diff / 31536000)
-            return "\(years) year\(years == 1 ? "" : "s") ago"
+            return L10n.format(years == 1 ? "%d year ago" : "%d years ago", years)
         }
     }
 }
-

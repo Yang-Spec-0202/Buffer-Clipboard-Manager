@@ -51,45 +51,45 @@ struct ShortcutsCheatSheetView: View {
     
     private let categories: [ShortcutCategory] = [
         ShortcutCategory(
-            name: "Navigation & Selection",
+            name: L10n.tr("Navigation & Selection"),
             icon: "arrow.up.and.down",
             items: [
-                ShortcutEntry(keys: ["↑", "↓"], title: "Navigate history"),
-                ShortcutEntry(keys: ["⌘", "A"], title: "Select all items"),
-                ShortcutEntry(keys: ["⇧", "↑ / ↓"], title: "Multi-select items"),
-                ShortcutEntry(keys: ["↵"], title: "Paste to frontmost app"),
-                ShortcutEntry(keys: ["Esc"], title: "Dismiss Buffer window")
+                ShortcutEntry(keys: ["↑", "↓"], title: L10n.tr("Navigate history")),
+                ShortcutEntry(keys: ["⌘", "A"], title: L10n.tr("Select all items")),
+                ShortcutEntry(keys: ["⇧", "↑ / ↓"], title: L10n.tr("Multi-select items")),
+                ShortcutEntry(keys: ["↵"], title: L10n.tr("Paste to frontmost app")),
+                ShortcutEntry(keys: ["Esc"], title: L10n.tr("Dismiss Buffer window"))
             ]
         ),
         ShortcutCategory(
-            name: "Item Actions",
+            name: L10n.tr("Item Actions"),
             icon: "bolt.fill",
             items: [
-                ShortcutEntry(keys: ["⌘", "C"], title: "Copy & dismiss"),
-                ShortcutEntry(keys: ["⌘", "P"], title: "Pin to top"),
-                ShortcutEntry(keys: ["⌘", "B"], title: "Bookmark item"),
-                ShortcutEntry(keys: ["⌘", "E"], title: "Edit snippet"),
-                ShortcutEntry(keys: ["⌘", "S"], title: "Save image to disk"),
-                ShortcutEntry(keys: ["⌘", "⌫"], title: "Delete item (or selected)")
+                ShortcutEntry(keys: ["⌘", "C"], title: L10n.tr("Copy & dismiss")),
+                ShortcutEntry(keys: ["⌘", "P"], title: L10n.tr("Pin to top")),
+                ShortcutEntry(keys: ["⌘", "B"], title: L10n.tr("Bookmark item")),
+                ShortcutEntry(keys: ["⌘", "E"], title: L10n.tr("Edit snippet")),
+                ShortcutEntry(keys: ["⌘", "S"], title: L10n.tr("Save image to disk")),
+                ShortcutEntry(keys: ["⌘", "⌫"], title: L10n.tr("Delete item (or selected)"))
             ]
         ),
         ShortcutCategory(
-            name: "Zoom & Size",
+            name: L10n.tr("Zoom & Size"),
             icon: "plus.magnifyingglass",
             items: [
-                ShortcutEntry(keys: ["⌘", "+"], title: "Zoom in (larger rows & preview text)"),
-                ShortcutEntry(keys: ["⌘", "-"], title: "Zoom out"),
-                ShortcutEntry(keys: ["⌘", "0"], title: "Reset zoom to 100%"),
-                ShortcutEntry(keys: ["2× Click"], title: "Toggle image actual size / fit"),
-                ShortcutEntry(keys: ["Pinch"], title: "Zoom image on trackpad")
+                ShortcutEntry(keys: ["⌘", "+"], title: L10n.tr("Zoom in (larger rows & preview text)")),
+                ShortcutEntry(keys: ["⌘", "-"], title: L10n.tr("Zoom out")),
+                ShortcutEntry(keys: ["⌘", "0"], title: L10n.tr("Reset zoom to 100%")),
+                ShortcutEntry(keys: [L10n.tr("2× Click")], title: L10n.tr("Toggle image actual size / fit")),
+                ShortcutEntry(keys: [L10n.tr("Pinch")], title: L10n.tr("Zoom image on trackpad"))
             ]
         ),
         ShortcutCategory(
-            name: "Application",
+            name: L10n.tr("Application"),
             icon: "gearshape.fill",
             items: [
-                ShortcutEntry(keys: ["⌘", ","], title: "Open Settings"),
-                ShortcutEntry(keys: ["⌘", "/"], title: "Toggle this cheat sheet")
+                ShortcutEntry(keys: ["⌘", ","], title: L10n.tr("Open Settings")),
+                ShortcutEntry(keys: ["⌘", "/"], title: L10n.tr("Toggle this cheat sheet"))
             ]
         )
     ]
@@ -103,9 +103,9 @@ struct ShortcutsCheatSheetView: View {
                     .foregroundColor(.accentColor)
                 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Keyboard Shortcuts")
+                    Text(L10n.tr("Keyboard Shortcuts"))
                         .font(.system(size: 13, weight: .semibold))
-                    Text("Master Buffer with your keyboard")
+                    Text(L10n.tr("Master Buffer with your keyboard"))
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
                 }
@@ -115,7 +115,7 @@ struct ShortcutsCheatSheetView: View {
                 if let onOpen = onOpenSettings, !isEmbeddedInSettings {
                     Button(action: onOpen) {
                         HStack(spacing: 4) {
-                            Text("Settings")
+                            Text(L10n.tr("Settings"))
                                 .font(.system(size: 11, weight: .medium))
                             Image(systemName: "gearshape")
                                 .font(.system(size: 10))
@@ -129,7 +129,7 @@ struct ShortcutsCheatSheetView: View {
                         )
                     }
                     .buttonStyle(.plain)
-                    .help("Open Buffer Settings (⌘,)")
+                    .help(L10n.tr("Open Buffer Settings (⌘,)"))
                 }
             }
             

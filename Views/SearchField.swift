@@ -14,7 +14,7 @@ struct SearchField: View {
                 .foregroundColor(.secondary)
                 .font(.system(size: 14))
             
-            TextField("Search clipboard...", text: $text)
+            TextField(L10n.tr("Search clipboard..."), text: $text)
                 .textFieldStyle(.plain)
                 .font(.system(size: 14))
                 .focused($isFocused)
@@ -47,7 +47,7 @@ struct SearchTextField: NSViewRepresentable {
         let textField = EscapeTextField()
         textField.delegate = context.coordinator
         textField.onEscape = onEscape
-        textField.placeholderString = "Search clipboard..."
+        textField.placeholderString = L10n.tr("Search clipboard...")
         textField.isBordered = false
         textField.backgroundColor = .clear
         textField.focusRingType = .none

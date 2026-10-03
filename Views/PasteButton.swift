@@ -14,7 +14,7 @@ struct PasteButton: View {
                 Image(systemName: "return")
                     .font(.system(size: 10, weight: .medium))
                 
-                Text("Paste")
+                Text(L10n.tr("Paste"))
                     .font(.system(size: 12, weight: .medium))
                     .lineLimit(1)
             }
